@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IhateLife">
+<title>IhateLife</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:      #0a0d14;
+  --surface: #111520;
+  --card:    #161c2d;
+  --border:  #1f2a40;
+  --accent:  #00e5a0;
+  --blue:    #3d9bff;
+  --purple:  #9d6fff;
+  --danger:  #ff4757;
+  --warn:    #ffa502;
+  --text:    #e8eaf0;
+  --muted:   #5c6882;
+  --radius:  14px;
+  --nav-h:   64px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 12px));
+}
+
+/* ── Bottom Nav ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  background: rgba(17,21,32,.95);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  display: flex;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav-btn {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px;
+  background: none; border: none;
+  color: var(--muted);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: color .2s;
+  padding-top: 8px;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-icon { font-size: 22px; line-height: 1; }
+
+/* ── Pages ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── Header ── */
+.header {
+  padding: 52px 20px 16px;
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(10,13,20,.92);
+  backdrop-filter: blur(12px);
+}
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.logo .g { color: var(--accent); }
+.logo .b { color: var(--blue); }
+.month-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+
+/* ── Summary ── */
+.summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 20px 16px;
+}
+.sum-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.sum-card.green-card { background: linear-gradient(135deg,#003d26,#001f14); border-color:#00694a; }
+.sum-card.blue-card  { background: linear-gradient(135deg,#00254d,#001428); border-color:#005299; }
+.sum-card.span2      { grid-column: 1 / -1; }
+.sum-card.net-pos    { background: linear-gradient(135deg,#002d1e,#001410); border-color:#005c3a; }
+.sum-card.net-neg    { background: linear-gradient(135deg,#2d0008,#140004); border-color:#7a0015; }
+
+.sum-label {
+  font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sum-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px; font-weight: 600;
+  color: var(--accent);
+}
+.sum-value.blue   { color: var(--blue); }
+.sum-value.danger { color: var(--danger); }
+.sum-value.pos    { color: var(--accent); }
+.sum-value.neg    { color: var(--danger); }
+.sum-sub {
+  font-size: 10px; color: var(--muted);
+  margin-top: 3px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.net-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.net-eq  { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:6px; }
+
+/* ── Progress bar ── */
+.pay-bar-wrap { margin-top: 8px; }
+.pay-bar { height: 5px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.pay-bar-fill { height: 100%; border-radius: 3px; background: var(--blue); transition: width .4s; }
+.pay-bar-labels {
+  display: flex; justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--muted); margin-top: 4px;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 6px;
+  padding: 0 20px 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+}
+.tab.active            { background: var(--accent); border-color: var(--accent); color: #000; }
+.itab.active           { background: var(--blue);   border-color: var(--blue);   color: #fff; }
+
+/* ── Section head ── */
+.section-head {
+  padding: 0 20px 10px;
+  font-size: 12px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Lists ── */
+.list { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+.empty-icon  { font-size: 44px; margin-bottom: 10px; }
+.empty-text  { font-size: 14px; line-height: 1.6; }
+
+/* ── Bill Card ── */
+.bill-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; gap: 12px; align-items: center;
+  position: relative; overflow: hidden;
+}
+.bill-card::before { content:''; position:absolute; left:0;top:0;bottom:0; width:3px; }
+.bill-card.unpaid::before { background: var(--warn); }
+.bill-card.overdue::before{ background: var(--danger); }
+.bill-card.paid::before   { background: var(--accent); }
+
+.bill-check {
+  width:28px;height:28px; border-radius:50%;
+  border:2px solid var(--border); background:transparent;
+  cursor:pointer; flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px; transition:all .2s;
+}
+.bill-check.checked { background:var(--accent);border-color:var(--accent);color:#000; }
+.bill-info { flex:1; min-width:0; }
+.bill-name {
+  font-size:15px;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:4px;
+}
+.bill-card.paid .bill-name { opacity:.5;text-decoration:line-through; }
+.bill-meta { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+.bill-due  { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted); }
+.bill-due.overdue { color:var(--danger);font-weight:600; }
+.bill-due.soon    { color:var(--warn);font-weight:600; }
+.pill {
+  font-size:10px;padding:2px 8px;border-radius:100px;
+  font-family:'JetBrains Mono',monospace;
+  background:var(--border);color:var(--muted);
+}
+.pill.blue   { background:#0d2a4a;color:var(--blue); }
+.pill.purple { background:#1e1040;color:var(--purple); }
+.pill.green  { background:#00291a;color:var(--accent); }
+.bill-right { display:flex;flex-direction:column;align-items:flex-end;gap:8px; }
+.bill-amount { font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;color:var(--text); }
+.bill-card.paid .bill-amount { opacity:.4; }
+.bill-delete { background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px;transition:color .2s; }
+.bill-delete:hover { color:var(--danger); }
+
+/* ── Income Card ── */
+.income-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; gap: 12px; align-items: center;
+  position: relative; overflow: hidden;
+}
+.income-card::before { content:''; position:absolute; left:0;top:0;bottom:0; width:3px; }
+.income-card.biweekly::before { background: var(--blue); }
+.income-card.monthly::before  { background: var(--accent); }
+.income-card.bonus::before    { background: var(--purple); }
+
+.income-icon {
+  width:36px;height:36px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.income-card.biweekly .income-icon { background:#0d2a4a; }
+.income-card.monthly  .income-icon { background:#00291a; }
+.income-card.bonus    .income-icon { background:#1e1040; }
+.income-info { flex:1;min-width:0; }
+.income-name { font-size:15px;font-weight:700;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.income-meta { display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
+.income-next { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted); }
+.income-next.soon { color:var(--blue);font-weight:600; }
+.income-mono { font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px; }
+.income-right { display:flex;flex-direction:column;align-items:flex-end;gap:6px; }
+.income-amount { font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600; }
+.income-card.biweekly .income-amount { color:var(--blue); }
+.income-card.monthly  .income-amount { color:var(--accent); }
+.income-card.bonus    .income-amount { color:var(--purple); }
+
+/* ── FAB ── */
+.fab {
+  position:fixed;
+  bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom,0px));
+  right:20px;
+  width:52px;height:52px;border-radius:50%;
+  border:none;font-size:26px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .15s;z-index:20;
+}
+.fab:active { transform:scale(.93); }
+.fab.bill-fab   { background:var(--accent);box-shadow:0 4px 24px rgba(0,229,160,.35);color:#000; }
+.fab.income-fab { background:var(--blue);  box-shadow:0 4px 24px rgba(61,155,255,.35);color:#fff;display:none; }
+
+/* ── Sheet ── */
+.overlay {
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  z-index:60;display:none;align-items:flex-end;
+}
+.overlay.open { display:flex; }
+.sheet {
+  background:var(--surface);border-radius:20px 20px 0 0;
+  padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));
+  width:100%;border-top:1px solid var(--border);
+  animation:slideUp .25s ease;
+  max-height:92dvh;overflow-y:auto;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.sheet-handle { width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px; }
+.sheet-title  { font-size:20px;font-weight:800;margin-bottom:20px; }
+
+.field { margin-bottom:14px; }
+.field label {
+  display:block;font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1px;
+  margin-bottom:6px;font-family:'JetBrains Mono',monospace;
+}
+.field input, .field select {
+  width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;color:var(--text);
+  font-family:'Syne',sans-serif;font-size:15px;
+  outline:none;transition:border-color .2s;-webkit-appearance:none;
+}
+.field input:focus,.field select:focus { border-color:var(--accent); }
+.field select option { background:var(--card); }
+.field-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+.checkbox-row { display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer; }
+.checkbox-row input[type=checkbox] { width:20px;height:20px;accent-color:var(--accent);cursor:pointer; }
+.checkbox-label { font-size:14px;color:var(--muted); }
+.type-hint { font-size:11px;color:var(--muted);margin-bottom:14px;font-family:'JetBrains Mono',monospace;line-height:1.5; }
+.btn-primary {
+  width:100%;border:none;border-radius:var(--radius);
+  padding:15px;font-family:'Syne',sans-serif;
+  font-size:16px;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.btn-primary.green { background:var(--accent);color:#000; }
+.btn-primary.blue  { background:var(--blue);  color:#fff; }
+.btn-primary:active { opacity:.85; }
+
+/* ── Install banner ── */
+.install-banner {
+  margin:0 20px 16px;
+  background:linear-gradient(135deg,#001c3d,#000d1f);
+  border:1px solid #0033aa;border-radius:var(--radius);
+  padding:14px 16px;display:flex;justify-content:space-between;
+  align-items:center;gap:12px;
+}
+.install-text { font-size:13px;color:#aab8e0;line-height:1.4; }
+.install-text strong { color:var(--text); }
+.install-btn {
+  flex-shrink:0;background:var(--blue);color:#fff;border:none;
+  border-radius:8px;padding:8px 14px;
+  font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;
+}
+.install-close { background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ BILLS PAGE ══════════ -->
+<div class="page active" id="page-bills">
+  <div class="header">
+    <div class="header-row">
+      <div class="logo">Ihate<span class="g">Life</span></div>
+      <div class="month-label" id="monthLabel"></div>
+    </div>
+  </div>
+
+  <div id="installBanner" class="install-banner" style="display:none">
+    <div class="install-text"><strong>Install IhateLife</strong><br>Add to Home Screen for offline access</div>
+    <button class="install-btn" id="installBtn">Install</button>
+    <button class="install-close" id="installClose">✕</button>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card green-card">
+      <div class="sum-label">Total Due</div>
+      <div class="sum-value" id="totalDue">$0.00</div>
+      <div class="sum-sub" id="dueCount">0 unpaid bills</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Overdue</div>
+      <div class="sum-value danger" id="totalOverdue">$0.00</div>
+      <div class="sum-sub" id="overdueCount">0 overdue</div>
+    </div>
+  </div>
+
+  <div class="tabs" id="billTabs">
+    <button class="tab active" data-filter="all">All</button>
+    <button class="tab" data-filter="unpaid">Unpaid</button>
+    <button class="tab" data-filter="overdue">Overdue</button>
+    <button class="tab" data-filter="paid">Paid</button>
+  </div>
+
+  <div class="section-head" id="billSectionHead"></div>
+  <div class="list" id="billList"></div>
+</div>
+
+<!-- ══════════ INCOME PAGE ══════════ -->
+<div class="page" id="page-income">
+  <div class="header">
+    <div class="header-row">
+      <div class="logo">Ihate<span class="b">Life</span></div>
+      <div class="month-label" id="incomeMonthLabel"></div>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card blue-card">
+      <div class="sum-label">Monthly Income</div>
+      <div class="sum-value blue" id="sumMonthly">$0.00</div>
+      <div class="sum-sub" id="sumBreakdown">no sources added</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Next Paycheck</div>
+      <div class="sum-value blue" id="sumNextAmt">—</div>
+      <div class="sum-sub" id="sumNextDate">—</div>
+    </div>
+  </div>
+
+  <!-- Net card -->
+  <div style="padding:0 20px 16px">
+    <div class="sum-card span2" id="netCard">
+      <div class="net-row">
+        <div>
+          <div class="sum-label">Monthly Income</div>
+          <div class="sum-value blue" id="netIncome">$0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div class="sum-label">After Recurring Bills</div>
+          <div class="sum-value pos" id="netAfter">$0.00</div>
+        </div>
+      </div>
+      <div class="net-eq" id="netEq">Income $0 − Bills $0 = $0</div>
+    </div>
+  </div>
+
+  <!-- Pay progress -->
+  <div style="padding:0 20px 16px" id="payProgressWrap" style="display:none">
+    <div class="sum-card">
+      <div class="sum-label">Next Paycheck Countdown</div>
+      <div class="pay-bar-wrap">
+        <div class="pay-bar"><div class="pay-bar-fill" id="payFill" style="width:0%"></div></div>
+        <div class="pay-bar-labels">
+          <span id="payLeft">—</span>
+          <span id="payRight">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" id="incomeTabs">
+    <button class="tab itab active" data-ifilter="all">All</button>
+    <button class="tab itab" data-ifilter="biweekly">Biweekly</button>
+    <button class="tab itab" data-ifilter="monthly">Monthly</button>
+    <button class="tab itab" data-ifilter="bonus">Bonus</button>
+  </div>
+
+  <div class="section-head" id="incomeSectionHead"></div>
+  <div class="list" id="incomeList"></div>
+</div>
+
+<!-- ══════════ BOTTOM NAV ══════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-page="bills">
+    <span class="nav-icon">🧾</span>Bills
+  </button>
+  <button class="nav-btn" data-page="income">
+    <span class="nav-icon">💵</span>Income
+  </button>
+</nav>
+
+<button class="fab bill-fab"   id="openAddBill">+</button>
+<button class="fab income-fab" id="openAddIncome">+</button>
+
+<!-- ADD BILL SHEET -->
+<div class="overlay" id="billOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add Bill</div>
+    <div class="field">
+      <label>Bill Name</label>
+      <input type="text" id="fName" placeholder="e.g. Netflix, Rent, Electricity">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="number" id="fAmount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="field">
+        <label>Due Date</label>
+        <input type="date" id="fDue">
+      </div>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select id="fCategory">
+        <option value="Housing">🏠 Housing</option>
+        <option value="Utilities">💡 Utilities</option>
+        <option value="Subscriptions">📱 Subscriptions</option>
+        <option value="Insurance">🛡️ Insurance</option>
+        <option value="Transport">🚗 Transport</option>
+        <option value="Food">🍔 Food</option>
+        <option value="Health">💊 Health</option>
+        <option value="Other">📦 Other</option>
+      </select>
+    </div>
+    <label class="checkbox-row">
+      <input type="checkbox" id="fRecurring">
+      <span class="checkbox-label">Recurring monthly bill</span>
+    </label>
+    <button class="btn-primary green" id="saveBill">Add Bill</button>
+  </div>
+</div>
+
+<!-- ADD INCOME SHEET -->
+<div class="overlay" id="incomeOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add Income</div>
+    <div class="field">
+      <label>Source Name</label>
+      <input type="text" id="iName" placeholder="e.g. Main Job, Side Gig, Annual Bonus">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Amount ($)</label>
+        <input type="number" id="iAmount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="field">
+        <label>Pay Type</label>
+        <select id="iType">
+          <option value="biweekly">Biweekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="bonus">Bonus / One-time</option>
+        </select>
+      </div>
+    </div>
+    <div class="type-hint" id="typeHint">↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)</div>
+    <div class="field" id="nextPayRow">
+      <label>Next Pay Date</label>
+      <input type="date" id="iNextPay">
+    </div>
+    <div class="field" id="bonusDateRow" style="display:none">
+      <label>Expected Date</label>
+      <input type="date" id="iBonusDate">
+    </div>
+    <div class="field">
+      <label>Notes (optional)</label>
+      <input type="text" id="iNotes" placeholder="e.g. gross, after tax, take-home...">
+    </div>
+    <button class="btn-primary blue" id="saveIncome" style="margin-top:6px">Add Income</button>
+  </div>
+</div>
+
+<script>
+// ── SW ──────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const sw = `const C='ihl-v1';const A=[self.location.href];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+}
+
+// ── Manifest ────────────────────────────────────────────────────
+const mLink = document.createElement('link'); mLink.rel='manifest';
+mLink.href = 'data:application/json,'+encodeURIComponent(JSON.stringify({
+  name:"IhateLife",short_name:"IhateLife",start_url:"./",display:"standalone",
+  background_color:"#0a0d14",theme_color:"#0a0d14",
+  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230a0d14'/%3E%3Ctext x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='serif'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E",sizes:"192x192",type:"image/svg+xml"}]
+}));
+document.head.appendChild(mLink);
+
+// ── State ───────────────────────────────────────────────────────
+let bills   = JSON.parse(localStorage.getItem('ihl_bills')   || '[]');
+let incomes = JSON.parse(localStorage.getItem('ihl_incomes') || '[]');
+let bFilter = 'all', iFilter = 'all';
+let prompt$ = null;
+
+const saveBills   = () => localStorage.setItem('ihl_bills',   JSON.stringify(bills));
+const saveIncomes = () => localStorage.setItem('ihl_incomes', JSON.stringify(incomes));
+
+const today  = () => new Date().toISOString().split('T')[0];
+const daysTo = s => { const d=new Date(s+'T00:00:00'),n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); };
+const fmtD   = s => new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const fmtM   = n => '$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const moEq   = i => i.type==='biweekly' ? i.amount*26/12 : i.type==='monthly' ? +i.amount : 0;
+
+// ── Bills Render ─────────────────────────────────────────────────
+function renderBills() {
+  const unpaid  = bills.filter(b=>!b.paid);
+  const overdue = bills.filter(b=>!b.paid && b.due<today());
+  document.getElementById('totalDue').textContent     = fmtM(unpaid.reduce((s,b)=>s+Number(b.amount),0));
+  document.getElementById('dueCount').textContent     = `${unpaid.length} unpaid bill${unpaid.length!==1?'s':''}`;
+  document.getElementById('totalOverdue').textContent = fmtM(overdue.reduce((s,b)=>s+Number(b.amount),0));
+  document.getElementById('overdueCount').textContent = `${overdue.length} overdue`;
+  document.getElementById('monthLabel').textContent   = new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  let f = [...bills];
+  if (bFilter==='unpaid')  f = bills.filter(b=>!b.paid && b.due>=today());
+  if (bFilter==='overdue') f = bills.filter(b=>!b.paid && b.due<today());
+  if (bFilter==='paid')    f = bills.filter(b=>b.paid);
+  f.sort((a,b) => {
+    if (!a.paid&&a.due<today()) return -1;
+    if (!b.paid&&b.due<today()) return 1;
+    return a.due.localeCompare(b.due);
+  });
+
+  document.getElementById('billSectionHead').textContent = `${f.length} bill${f.length!==1?'s':''}`;
+  const el = document.getElementById('billList');
+  if (!f.length) { el.innerHTML=`<div class="empty-state"><div class="empty-icon">🧾</div><div class="empty-text">No bills here.<br>Tap + to add one.</div></div>`; return; }
+
+  el.innerHTML = f.map(b => {
+    const d=daysTo(b.due), ov=!b.paid&&d<0, soon=!b.paid&&d>=0&&d<=3;
+    const st = b.paid?'paid':ov?'overdue':'unpaid';
+    let dt = fmtD(b.due);
+    if (!b.paid) dt = ov?`${Math.abs(d)}d overdue`: d===0?'Due today': d===1?'Due tomorrow':`Due in ${d}d`;
+    return `<div class="bill-card ${st}">
+      <button class="bill-check ${b.paid?'checked':''}" onclick="togglePaid('${b.id}')">${b.paid?'✓':''}</button>
+      <div class="bill-info">
+        <div class="bill-name">${b.name}</div>
+        <div class="bill-meta">
+          <span class="bill-due ${ov?'overdue':soon?'soon':''}">${dt}</span>
+          <span class="pill">${b.category}</span>
+          ${b.recurring?'<span class="pill">↻</span>':''}
+        </div>
+      </div>
+      <div class="bill-right">
+        <div class="bill-amount">${fmtM(b.amount)}</div>
+        <button class="bill-delete" onclick="deleteBill('${b.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Income Render ────────────────────────────────────────────────
+function renderIncome() {
+  document.getElementById('incomeMonthLabel').textContent = new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  const monthly     = incomes.reduce((s,i)=>s+moEq(i),0);
+  const monthBills  = bills.filter(b=>b.recurring).reduce((s,b)=>s+Number(b.amount),0);
+  const net         = monthly - monthBills;
+
+  const bwCnt = incomes.filter(i=>i.type==='biweekly').length;
+  const moCnt = incomes.filter(i=>i.type==='monthly' ).length;
+  const bnCnt = incomes.filter(i=>i.type==='bonus'   ).length;
+  const parts = [];
+  if (bwCnt) parts.push(`${bwCnt} biweekly`);
+  if (moCnt) parts.push(`${moCnt} monthly`);
+  if (bnCnt) parts.push(`${bnCnt} bonus`);
+
+  document.getElementById('sumMonthly').textContent  = fmtM(monthly);
+  document.getElementById('sumBreakdown').textContent = parts.join(' · ') || 'no sources added';
+
+  // Next paycheck
+  const upcoming = incomes.filter(i=>i.type!=='bonus'&&i.nextPay).sort((a,b)=>a.nextPay.localeCompare(b.nextPay));
+  if (upcoming.length) {
+    const nx = upcoming[0], d = daysTo(nx.nextPay);
+    document.getElementById('sumNextAmt').textContent  = fmtM(nx.amount);
+    document.getElementById('sumNextDate').textContent =
+      d===0 ? 'Today! 🎉' : d===1 ? 'Tomorrow' : `in ${d}d · ${fmtD(nx.nextPay)}`;
+    const cycle = nx.type==='biweekly'?14:30;
+    const pct   = Math.max(0,Math.min(100,Math.round((1-d/cycle)*100)));
+    document.getElementById('payProgressWrap').style.display='';
+    document.getElementById('payFill').style.width = pct+'%';
+    document.getElementById('payLeft').textContent  = `${d}d remaining`;
+    document.getElementById('payRight').textContent = fmtD(nx.nextPay);
+  } else {
+    document.getElementById('sumNextAmt').textContent  = '—';
+    document.getElementById('sumNextDate').textContent = 'no paychecks set';
+    document.getElementById('payProgressWrap').style.display='none';
+  }
+
+  // Net card
+  const nc = document.getElementById('netCard');
+  nc.className = 'sum-card span2 '+(net>=0?'net-pos':'net-neg');
+  document.getElementById('netIncome').textContent = fmtM(monthly);
+  document.getElementById('netAfter').textContent  = fmtM(net);
+  document.getElementById('netAfter').className    = 'sum-value '+(net>=0?'pos':'neg');
+  document.getElementById('netEq').textContent     = `Income ${fmtM(monthly)} − Bills ${fmtM(monthBills)} = ${fmtM(net)}`;
+
+  // List
+  let f = [...incomes];
+  if (iFilter!=='all') f = incomes.filter(i=>i.type===iFilter);
+  f.sort((a,b) => {
+    const da=a.nextPay||a.bonusDate||'9999', db=b.nextPay||b.bonusDate||'9999';
+    return da.localeCompare(db);
+  });
+
+  document.getElementById('incomeSectionHead').textContent = `${f.length} source${f.length!==1?'s':''}`;
+  const el = document.getElementById('incomeList');
+  if (!f.length) { el.innerHTML=`<div class="empty-state"><div class="empty-icon">💵</div><div class="empty-text">No income sources yet.<br>Tap + to add a paycheck.</div></div>`; return; }
+
+  const icons  = {biweekly:'💳', monthly:'🏦', bonus:'🎁'};
+  const labels = {biweekly:'Biweekly', monthly:'Monthly', bonus:'Bonus'};
+  const pills  = {biweekly:'blue', monthly:'green', bonus:'purple'};
+
+  el.innerHTML = f.map(inc => {
+    const dateF = inc.type==='bonus' ? inc.bonusDate : inc.nextPay;
+    const d = dateF ? daysTo(dateF) : null;
+    const soon = d!==null && d>=0 && d<=3;
+    let nextTxt = dateF ? fmtD(dateF) : '—';
+    if (d!==null) {
+      if (inc.type!=='bonus') {
+        nextTxt = d===0?'Today! 🎉': d===1?'Tomorrow': `in ${d}d · ${fmtD(dateF)}`;
+      } else {
+        nextTxt = d>=0 ? `Expected in ${d}d` : `Expected ${fmtD(dateF)}`;
+      }
+    }
+    const mono = inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
+               : inc.type==='monthly'  ? 'per month'
+               : 'one-time';
+    return `<div class="income-card ${inc.type}">
+      <div class="income-icon">${icons[inc.type]}</div>
+      <div class="income-info">
+        <div class="income-name">${inc.name}</div>
+        <div class="income-meta">
+          <span class="income-next ${soon?'soon':''}">${nextTxt}</span>
+          <span class="pill ${pills[inc.type]}">${labels[inc.type]}</span>
+          ${inc.notes?`<span class="pill">${inc.notes}</span>`:''}
+        </div>
+        <div class="income-mono">${mono}</div>
+      </div>
+      <div class="income-right">
+        <div class="income-amount">${fmtM(inc.amount)}</div>
+        <button class="bill-delete" onclick="deleteIncome('${inc.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const renderAll = () => { renderBills(); renderIncome(); };
+
+// ── Actions ──────────────────────────────────────────────────────
+function togglePaid(id)   { const b=bills.find(x=>x.id===id); if(!b)return; b.paid=!b.paid; saveBills(); renderAll(); }
+function deleteBill(id)   { bills=bills.filter(x=>x.id!==id); saveBills(); renderAll(); }
+function deleteIncome(id) { incomes=incomes.filter(x=>x.id!==id); saveIncomes(); renderAll(); }
+
+// ── Bill Form ────────────────────────────────────────────────────
+document.getElementById('openAddBill').onclick = () => {
+  const d=new Date(); d.setDate(d.getDate()+7);
+  document.getElementById('fDue').value = d.toISOString().split('T')[0];
+  document.getElementById('billOverlay').classList.add('open');
+};
+document.getElementById('billOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
+document.getElementById('saveBill').onclick = () => {
+  const name=document.getElementById('fName').value.trim(), amount=document.getElementById('fAmount').value, due=document.getElementById('fDue').value;
+  if (!name||!amount||!due) { alert('Fill in name, amount, and due date.'); return; }
+  bills.push({ id:Date.now().toString(36), name, amount:parseFloat(amount), due, category:document.getElementById('fCategory').value, recurring:document.getElementById('fRecurring').checked, paid:false, created:today() });
+  saveBills(); renderAll();
+  document.getElementById('billOverlay').classList.remove('open');
+  ['fName','fAmount'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fRecurring').checked=false;
+};
+
+// ── Income Form ──────────────────────────────────────────────────
+const HINTS = {
+  biweekly: '↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)',
+  monthly:  '↻ Once per month — 12 payments/yr',
+  bonus:    '★ One-time — not counted in monthly recurring total'
+};
+document.getElementById('iType').addEventListener('change', function() {
+  document.getElementById('typeHint').textContent = HINTS[this.value];
+  const isBonus = this.value==='bonus';
+  document.getElementById('nextPayRow').style.display   = isBonus?'none':'';
+  document.getElementById('bonusDateRow').style.display = isBonus?'':'none';
+});
+document.getElementById('openAddIncome').onclick = () => {
+  const d=new Date(); d.setDate(d.getDate()+14);
+  const s=d.toISOString().split('T')[0];
+  document.getElementById('iNextPay').value=s;
+  document.getElementById('iBonusDate').value=s;
+  document.getElementById('incomeOverlay').classList.add('open');
+};
+document.getElementById('incomeOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
+document.getElementById('saveIncome').onclick = () => {
+  const name=document.getElementById('iName').value.trim(), amount=document.getElementById('iAmount').value, type=document.getElementById('iType').value;
+  if (!name||!amount) { alert('Fill in source name and amount.'); return; }
+  const entry = { id:Date.now().toString(36), name, amount:parseFloat(amount), type, notes:document.getElementById('iNotes').value.trim(), created:today() };
+  if (type==='bonus') entry.bonusDate=document.getElementById('iBonusDate').value;
+  else                entry.nextPay  =document.getElementById('iNextPay').value;
+  incomes.push(entry); saveIncomes(); renderAll();
+  document.getElementById('incomeOverlay').classList.remove('open');
+  ['iName','iAmount','iNotes'].forEach(id => document.getElementById(id).value='');
+};
+
+// ── Tabs ─────────────────────────────────────────────────────────
+document.querySelectorAll('#billTabs .tab').forEach(t => t.addEventListener('click',()=>{
+  document.querySelectorAll('#billTabs .tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); bFilter=t.dataset.filter; renderBills();
+}));
+document.querySelectorAll('#incomeTabs .tab').forEach(t => t.addEventListener('click',()=>{
+  document.querySelectorAll('#incomeTabs .tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); iFilter=t.dataset.ifilter; renderIncome();
+}));
+
+// ── Nav ───────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click',()=>{
+  const p=btn.dataset.page;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(pg=>pg.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelector('.bill-fab').style.display   = p==='bills'  ? 'flex' : 'none';
+  document.querySelector('.income-fab').style.display = p==='income' ? 'flex' : 'none';
+}));
+
+// ── Install ───────────────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); prompt$=e;
+  if (!localStorage.getItem('installDismissed')) document.getElementById('installBanner').style.display='flex';
+});
+document.getElementById('installBtn').addEventListener('click', async ()=>{
+  if (!prompt$) return; prompt$.prompt(); await prompt$.userChoice; prompt$=null;
+  document.getElementById('installBanner').style.display='none';
+});
+document.getElementById('installClose').addEventListener('click', ()=>{
+  document.getElementById('installBanner').style.display='none';
+  localStorage.setItem('installDismissed','1');
+});
+
+renderAll();
+</script>
+</body>
+</html>
