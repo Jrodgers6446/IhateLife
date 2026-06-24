@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="108" fill="#0a0d14"/>
+  <rect x="24" y="24" width="464" height="464" rx="88" fill="none" stroke="#00e5a0" stroke-width="6" opacity="0.35"/>
+  <text x="256" y="300" text-anchor="middle" font-size="240" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif">=µ</text>
+</svg>

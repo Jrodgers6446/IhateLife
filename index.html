@@ -8,8 +8,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="IhateLife">
+<meta name="description" content="Track bills, paychecks, and what's left after recurring expenses.">
 <title>IhateLife</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
@@ -215,8 +220,10 @@ body {
 .bill-right { display:flex;flex-direction:column;align-items:flex-end;gap:8px; }
 .bill-amount { font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;color:var(--text); }
 .bill-card.paid .bill-amount { opacity:.4; }
-.bill-delete { background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px;transition:color .2s; }
-.bill-delete:hover { color:var(--danger); }
+.card-actions { display:flex;gap:4px;align-items:center; }
+.card-btn { background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 4px;transition:color .2s;line-height:1; }
+.card-btn:hover { color:var(--blue); }
+.card-btn.danger:hover { color:var(--danger); }
 
 /* ── Income Card ── */
 .income-card {
@@ -246,6 +253,13 @@ body {
 .income-mono { font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:3px; }
 .income-right { display:flex;flex-direction:column;align-items:flex-end;gap:6px; }
 .income-amount { font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600; }
+.calc-preview {
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;margin-bottom:16px;text-align:center;
+}
+.calc-preview-label { font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace;margin-bottom:6px; }
+.calc-preview-amount { font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:var(--blue); }
+.calc-preview-detail { font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5; }
 .income-card.biweekly .income-amount { color:var(--blue); }
 .income-card.monthly  .income-amount { color:var(--accent); }
 .income-card.bonus    .income-amount { color:var(--purple); }
@@ -409,7 +423,7 @@ body {
   </div>
 
   <!-- Pay progress -->
-  <div style="padding:0 20px 16px" id="payProgressWrap" style="display:none">
+  <div style="padding:0 20px 16px;display:none" id="payProgressWrap">
     <div class="sum-card">
       <div class="sum-label">Next Paycheck Countdown</div>
       <div class="pay-bar-wrap">
@@ -450,7 +464,7 @@ body {
 <div class="overlay" id="billOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Add Bill</div>
+    <div class="sheet-title" id="billSheetTitle">Add Bill</div>
     <div class="field">
       <label>Bill Name</label>
       <input type="text" id="fName" placeholder="e.g. Netflix, Rent, Electricity">
@@ -483,6 +497,7 @@ body {
       <span class="checkbox-label">Recurring monthly bill</span>
     </label>
     <button class="btn-primary green" id="saveBill">Add Bill</button>
+    <input type="hidden" id="billEditId" value="">
   </div>
 </div>
 
@@ -490,26 +505,49 @@ body {
 <div class="overlay" id="incomeOverlay">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Add Income</div>
+    <div class="sheet-title" id="incomeSheetTitle">Add Paycheck</div>
     <div class="field">
       <label>Source Name</label>
       <input type="text" id="iName" placeholder="e.g. Main Job, Side Gig, Annual Bonus">
     </div>
+    <div class="field">
+      <label>Pay Type</label>
+      <select id="iType">
+        <option value="biweekly">Biweekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="bonus">Bonus / One-time</option>
+      </select>
+    </div>
+    <div class="type-hint" id="typeHint">↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)</div>
     <div class="field-row">
       <div class="field">
-        <label>Amount ($)</label>
-        <input type="number" id="iAmount" placeholder="0.00" step="0.01" min="0">
+        <label>Regular Hours</label>
+        <input type="number" id="iRegHours" placeholder="40" step="0.25" min="0" value="40">
       </div>
       <div class="field">
-        <label>Pay Type</label>
-        <select id="iType">
-          <option value="biweekly">Biweekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="bonus">Bonus / One-time</option>
+        <label>Hourly Rate ($)</label>
+        <input type="number" id="iHourlyRate" placeholder="0.00" step="0.01" min="0">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Overtime Hours</label>
+        <input type="number" id="iOtHours" placeholder="0" step="0.25" min="0" value="0">
+      </div>
+      <div class="field">
+        <label>OT Multiplier</label>
+        <select id="iOtMult">
+          <option value="1.5">1.5× time and a half</option>
+          <option value="2">2× double time</option>
+          <option value="1">1× straight time</option>
         </select>
       </div>
     </div>
-    <div class="type-hint" id="typeHint">↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)</div>
+    <div class="calc-preview">
+      <div class="calc-preview-label">Calculated Paycheck</div>
+      <div class="calc-preview-amount" id="calcPreviewAmt">$0.00</div>
+      <div class="calc-preview-detail" id="calcPreviewDetail">Enter hours and rate</div>
+    </div>
     <div class="field" id="nextPayRow">
       <label>Next Pay Date</label>
       <input type="date" id="iNextPay">
@@ -522,25 +560,22 @@ body {
       <label>Notes (optional)</label>
       <input type="text" id="iNotes" placeholder="e.g. gross, after tax, take-home...">
     </div>
-    <button class="btn-primary blue" id="saveIncome" style="margin-top:6px">Add Income</button>
+    <button class="btn-primary blue" id="saveIncome" style="margin-top:6px">Add Paycheck</button>
+    <input type="hidden" id="incomeEditId" value="">
   </div>
 </div>
 
 <script>
-// ── SW ──────────────────────────────────────────────────────────
+// ── PWA ─────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  const sw = `const C='ihl-v1';const A=[self.location.href];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
-  navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
 }
 
-// ── Manifest ────────────────────────────────────────────────────
-const mLink = document.createElement('link'); mLink.rel='manifest';
-mLink.href = 'data:application/json,'+encodeURIComponent(JSON.stringify({
-  name:"IhateLife",short_name:"IhateLife",start_url:"./",display:"standalone",
-  background_color:"#0a0d14",theme_color:"#0a0d14",
-  icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230a0d14'/%3E%3Ctext x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-size='100' font-family='serif'%3E%F0%9F%92%B5%3C/text%3E%3C/svg%3E",sizes:"192x192",type:"image/svg+xml"}]
-}));
-document.head.appendChild(mLink);
+const isInstalled = () =>
+  window.matchMedia('(display-mode: standalone)').matches ||
+  window.navigator.standalone === true;
 
 // ── State ───────────────────────────────────────────────────────
 let bills   = JSON.parse(localStorage.getItem('ihl_bills')   || '[]');
@@ -551,11 +586,47 @@ let prompt$ = null;
 const saveBills   = () => localStorage.setItem('ihl_bills',   JSON.stringify(bills));
 const saveIncomes = () => localStorage.setItem('ihl_incomes', JSON.stringify(incomes));
 
+const esc    = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const today  = () => new Date().toISOString().split('T')[0];
 const daysTo = s => { const d=new Date(s+'T00:00:00'),n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); };
 const fmtD   = s => new Date(s+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
 const fmtM   = n => '$'+Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-const moEq   = i => i.type==='biweekly' ? i.amount*26/12 : i.type==='monthly' ? +i.amount : 0;
+const addMonth = s => { const d=new Date(s+'T00:00:00'); d.setMonth(d.getMonth()+1); return d.toISOString().split('T')[0]; };
+
+const calcPaycheck = i => {
+  const hrs=Number(i.regularHours)||0, rate=Number(i.hourlyRate)||0;
+  const ot=Number(i.overtimeHours)||0, mult=Number(i.overtimeMultiplier)||1.5;
+  return hrs*rate + ot*rate*mult;
+};
+const incomeAmount = i => i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
+const moEq = i => i.type==='biweekly' ? incomeAmount(i)*26/12 : i.type==='monthly' ? incomeAmount(i) : 0;
+
+const incomeCalcDetail = i => {
+  const hrs=Number(i.regularHours)||0, rate=Number(i.hourlyRate)||0;
+  const ot=Number(i.overtimeHours)||0, mult=Number(i.overtimeMultiplier)||1.5;
+  if (!rate) return '—';
+  const parts = [`${hrs}h × ${fmtM(rate)}`];
+  if (ot>0) parts.push(`${ot}h OT × ${mult}×`);
+  return parts.join(' + ');
+};
+
+const HINTS = {
+  biweekly: '↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)',
+  monthly:  '↻ Once per month — 12 payments/yr',
+  bonus:    '★ One-time — not counted in monthly recurring total'
+};
+
+function updateCalcPreview() {
+  const i = {
+    regularHours: document.getElementById('iRegHours').value,
+    hourlyRate: document.getElementById('iHourlyRate').value,
+    overtimeHours: document.getElementById('iOtHours').value,
+    overtimeMultiplier: document.getElementById('iOtMult').value
+  };
+  const amt = calcPaycheck(i);
+  document.getElementById('calcPreviewAmt').textContent = fmtM(amt);
+  document.getElementById('calcPreviewDetail').textContent = incomeCalcDetail(i);
+}
 
 // ── Bills Render ─────────────────────────────────────────────────
 function renderBills() {
@@ -588,17 +659,20 @@ function renderBills() {
     if (!b.paid) dt = ov?`${Math.abs(d)}d overdue`: d===0?'Due today': d===1?'Due tomorrow':`Due in ${d}d`;
     return `<div class="bill-card ${st}">
       <button class="bill-check ${b.paid?'checked':''}" onclick="togglePaid('${b.id}')">${b.paid?'✓':''}</button>
-      <div class="bill-info">
-        <div class="bill-name">${b.name}</div>
+      <div class="bill-info" onclick="editBill('${b.id}')" style="cursor:pointer">
+        <div class="bill-name">${esc(b.name)}</div>
         <div class="bill-meta">
           <span class="bill-due ${ov?'overdue':soon?'soon':''}">${dt}</span>
-          <span class="pill">${b.category}</span>
+          <span class="pill">${esc(b.category)}</span>
           ${b.recurring?'<span class="pill">↻</span>':''}
         </div>
       </div>
       <div class="bill-right">
         <div class="bill-amount">${fmtM(b.amount)}</div>
-        <button class="bill-delete" onclick="deleteBill('${b.id}')">🗑</button>
+        <div class="card-actions">
+          <button class="card-btn" onclick="editBill('${b.id}')" title="Edit">✏️</button>
+          <button class="card-btn danger" onclick="deleteBill('${b.id}')" title="Delete">🗑</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -627,7 +701,7 @@ function renderIncome() {
   const upcoming = incomes.filter(i=>i.type!=='bonus'&&i.nextPay).sort((a,b)=>a.nextPay.localeCompare(b.nextPay));
   if (upcoming.length) {
     const nx = upcoming[0], d = daysTo(nx.nextPay);
-    document.getElementById('sumNextAmt').textContent  = fmtM(nx.amount);
+    document.getElementById('sumNextAmt').textContent  = fmtM(incomeAmount(nx));
     document.getElementById('sumNextDate').textContent =
       d===0 ? 'Today! 🎉' : d===1 ? 'Tomorrow' : `in ${d}d · ${fmtD(nx.nextPay)}`;
     const cycle = nx.type==='biweekly'?14:30;
@@ -678,23 +752,27 @@ function renderIncome() {
         nextTxt = d>=0 ? `Expected in ${d}d` : `Expected ${fmtD(dateF)}`;
       }
     }
-    const mono = inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
+    const mono = inc.hourlyRate!=null ? incomeCalcDetail(inc)
+               : inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
                : inc.type==='monthly'  ? 'per month'
                : 'one-time';
     return `<div class="income-card ${inc.type}">
       <div class="income-icon">${icons[inc.type]}</div>
-      <div class="income-info">
-        <div class="income-name">${inc.name}</div>
+      <div class="income-info" onclick="editIncome('${inc.id}')" style="cursor:pointer">
+        <div class="income-name">${esc(inc.name)}</div>
         <div class="income-meta">
           <span class="income-next ${soon?'soon':''}">${nextTxt}</span>
           <span class="pill ${pills[inc.type]}">${labels[inc.type]}</span>
-          ${inc.notes?`<span class="pill">${inc.notes}</span>`:''}
+          ${inc.notes?`<span class="pill">${esc(inc.notes)}</span>`:''}
         </div>
-        <div class="income-mono">${mono}</div>
+        <div class="income-mono">${mono}${inc.hourlyRate!=null && inc.type!=='bonus' ? ` · ≈ ${fmtM(moEq(inc))}/mo` : ''}</div>
       </div>
       <div class="income-right">
-        <div class="income-amount">${fmtM(inc.amount)}</div>
-        <button class="bill-delete" onclick="deleteIncome('${inc.id}')">🗑</button>
+        <div class="income-amount">${fmtM(incomeAmount(inc))}</div>
+        <div class="card-actions">
+          <button class="card-btn" onclick="editIncome('${inc.id}')" title="Edit">✏️</button>
+          <button class="card-btn danger" onclick="deleteIncome('${inc.id}')" title="Delete">🗑</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -703,56 +781,157 @@ function renderIncome() {
 const renderAll = () => { renderBills(); renderIncome(); };
 
 // ── Actions ──────────────────────────────────────────────────────
-function togglePaid(id)   { const b=bills.find(x=>x.id===id); if(!b)return; b.paid=!b.paid; saveBills(); renderAll(); }
+function togglePaid(id) {
+  const b = bills.find(x => x.id === id);
+  if (!b) return;
+  if (b.paid) {
+    b.paid = false;
+  } else if (b.recurring) {
+    b.due = addMonth(b.due);
+  } else {
+    b.paid = true;
+  }
+  saveBills(); renderAll();
+}
 function deleteBill(id)   { bills=bills.filter(x=>x.id!==id); saveBills(); renderAll(); }
 function deleteIncome(id) { incomes=incomes.filter(x=>x.id!==id); saveIncomes(); renderAll(); }
 
-// ── Bill Form ────────────────────────────────────────────────────
-document.getElementById('openAddBill').onclick = () => {
-  const d=new Date(); d.setDate(d.getDate()+7);
+function resetBillForm() {
+  document.getElementById('billEditId').value = '';
+  document.getElementById('billSheetTitle').textContent = 'Add Bill';
+  document.getElementById('saveBill').textContent = 'Add Bill';
+  ['fName','fAmount'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fCategory').value = 'Housing';
+  document.getElementById('fRecurring').checked = false;
+  const d = new Date(); d.setDate(d.getDate()+7);
   document.getElementById('fDue').value = d.toISOString().split('T')[0];
+}
+
+function openBillSheet(id) {
+  resetBillForm();
+  if (id) {
+    const b = bills.find(x => x.id === id);
+    if (!b) return;
+    document.getElementById('billEditId').value = id;
+    document.getElementById('billSheetTitle').textContent = 'Edit Bill';
+    document.getElementById('saveBill').textContent = 'Save Changes';
+    document.getElementById('fName').value = b.name;
+    document.getElementById('fAmount').value = b.amount;
+    document.getElementById('fDue').value = b.due;
+    document.getElementById('fCategory').value = b.category;
+    document.getElementById('fRecurring').checked = !!b.recurring;
+  }
   document.getElementById('billOverlay').classList.add('open');
-};
+}
+function editBill(id) { openBillSheet(id); }
+
+function resetIncomeForm() {
+  document.getElementById('incomeEditId').value = '';
+  document.getElementById('incomeSheetTitle').textContent = 'Add Paycheck';
+  document.getElementById('saveIncome').textContent = 'Add Paycheck';
+  document.getElementById('iName').value = '';
+  document.getElementById('iType').value = 'biweekly';
+  document.getElementById('iRegHours').value = '40';
+  document.getElementById('iHourlyRate').value = '';
+  document.getElementById('iOtHours').value = '0';
+  document.getElementById('iOtMult').value = '1.5';
+  document.getElementById('iNotes').value = '';
+  document.getElementById('typeHint').textContent = HINTS.biweekly;
+  document.getElementById('nextPayRow').style.display = '';
+  document.getElementById('bonusDateRow').style.display = 'none';
+  const d = new Date(); d.setDate(d.getDate()+14);
+  const s = d.toISOString().split('T')[0];
+  document.getElementById('iNextPay').value = s;
+  document.getElementById('iBonusDate').value = s;
+  updateCalcPreview();
+}
+
+function openIncomeSheet(id) {
+  resetIncomeForm();
+  if (id) {
+    const inc = incomes.find(x => x.id === id);
+    if (!inc) return;
+    document.getElementById('incomeEditId').value = id;
+    document.getElementById('incomeSheetTitle').textContent = 'Edit Paycheck';
+    document.getElementById('saveIncome').textContent = 'Save Changes';
+    document.getElementById('iName').value = inc.name;
+    document.getElementById('iType').value = inc.type;
+    document.getElementById('iType').dispatchEvent(new Event('change'));
+    if (inc.hourlyRate != null) {
+      document.getElementById('iRegHours').value = inc.regularHours ?? 40;
+      document.getElementById('iHourlyRate').value = inc.hourlyRate;
+      document.getElementById('iOtHours').value = inc.overtimeHours ?? 0;
+      document.getElementById('iOtMult').value = String(inc.overtimeMultiplier ?? 1.5);
+    } else if (inc.amount) {
+      document.getElementById('iHourlyRate').value = (inc.amount / 40).toFixed(2);
+      document.getElementById('iRegHours').value = '40';
+    }
+    document.getElementById('iNotes').value = inc.notes || '';
+    if (inc.type === 'bonus') document.getElementById('iBonusDate').value = inc.bonusDate || '';
+    else document.getElementById('iNextPay').value = inc.nextPay || '';
+    updateCalcPreview();
+  }
+  document.getElementById('incomeOverlay').classList.add('open');
+}
+function editIncome(id) { openIncomeSheet(id); }
+
+// ── Bill Form ────────────────────────────────────────────────────
+document.getElementById('openAddBill').onclick = () => openBillSheet();
 document.getElementById('billOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
 document.getElementById('saveBill').onclick = () => {
   const name=document.getElementById('fName').value.trim(), amount=document.getElementById('fAmount').value, due=document.getElementById('fDue').value;
   if (!name||!amount||!due) { alert('Fill in name, amount, and due date.'); return; }
-  bills.push({ id:Date.now().toString(36), name, amount:parseFloat(amount), due, category:document.getElementById('fCategory').value, recurring:document.getElementById('fRecurring').checked, paid:false, created:today() });
+  const data = { name, amount:parseFloat(amount), due, category:document.getElementById('fCategory').value, recurring:document.getElementById('fRecurring').checked };
+  const editId = document.getElementById('billEditId').value;
+  if (editId) {
+    const b = bills.find(x => x.id === editId);
+    if (b) Object.assign(b, data);
+  } else {
+    bills.push({ id:Date.now().toString(36), ...data, paid:false, created:today() });
+  }
   saveBills(); renderAll();
   document.getElementById('billOverlay').classList.remove('open');
-  ['fName','fAmount'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('fRecurring').checked=false;
+  resetBillForm();
 };
 
 // ── Income Form ──────────────────────────────────────────────────
-const HINTS = {
-  biweekly: '↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)',
-  monthly:  '↻ Once per month — 12 payments/yr',
-  bonus:    '★ One-time — not counted in monthly recurring total'
-};
 document.getElementById('iType').addEventListener('change', function() {
   document.getElementById('typeHint').textContent = HINTS[this.value];
   const isBonus = this.value==='bonus';
   document.getElementById('nextPayRow').style.display   = isBonus?'none':'';
   document.getElementById('bonusDateRow').style.display = isBonus?'':'none';
 });
-document.getElementById('openAddIncome').onclick = () => {
-  const d=new Date(); d.setDate(d.getDate()+14);
-  const s=d.toISOString().split('T')[0];
-  document.getElementById('iNextPay').value=s;
-  document.getElementById('iBonusDate').value=s;
-  document.getElementById('incomeOverlay').classList.add('open');
-};
+['iRegHours','iHourlyRate','iOtHours','iOtMult'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updateCalcPreview));
+document.getElementById('openAddIncome').onclick = () => openIncomeSheet();
 document.getElementById('incomeOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
 document.getElementById('saveIncome').onclick = () => {
-  const name=document.getElementById('iName').value.trim(), amount=document.getElementById('iAmount').value, type=document.getElementById('iType').value;
-  if (!name||!amount) { alert('Fill in source name and amount.'); return; }
-  const entry = { id:Date.now().toString(36), name, amount:parseFloat(amount), type, notes:document.getElementById('iNotes').value.trim(), created:today() };
+  const name=document.getElementById('iName').value.trim(), type=document.getElementById('iType').value;
+  const regularHours=parseFloat(document.getElementById('iRegHours').value)||0;
+  const hourlyRate=parseFloat(document.getElementById('iHourlyRate').value);
+  const overtimeHours=parseFloat(document.getElementById('iOtHours').value)||0;
+  const overtimeMultiplier=parseFloat(document.getElementById('iOtMult').value)||1.5;
+  if (!name) { alert('Fill in source name.'); return; }
+  if (!document.getElementById('iHourlyRate').value) { alert('Enter an hourly rate.'); return; }
+  const amount = calcPaycheck({ regularHours, hourlyRate, overtimeHours, overtimeMultiplier });
+  if (amount <= 0) { alert('Calculated paycheck must be greater than $0.'); return; }
+  const entry = {
+    name, type, amount,
+    regularHours, hourlyRate, overtimeHours, overtimeMultiplier,
+    notes: document.getElementById('iNotes').value.trim()
+  };
   if (type==='bonus') entry.bonusDate=document.getElementById('iBonusDate').value;
   else                entry.nextPay  =document.getElementById('iNextPay').value;
-  incomes.push(entry); saveIncomes(); renderAll();
+  const editId = document.getElementById('incomeEditId').value;
+  if (editId) {
+    const inc = incomes.find(x => x.id === editId);
+    if (inc) Object.assign(inc, entry);
+  } else {
+    incomes.push({ id:Date.now().toString(36), ...entry, created:today() });
+  }
+  saveIncomes(); renderAll();
   document.getElementById('incomeOverlay').classList.remove('open');
-  ['iName','iAmount','iNotes'].forEach(id => document.getElementById(id).value='');
+  resetIncomeForm();
 };
 
 // ── Tabs ─────────────────────────────────────────────────────────
@@ -779,7 +958,8 @@ document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click
 // ── Install ───────────────────────────────────────────────────────
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault(); prompt$=e;
-  if (!localStorage.getItem('installDismissed')) document.getElementById('installBanner').style.display='flex';
+  if (!isInstalled() && !localStorage.getItem('installDismissed'))
+    document.getElementById('installBanner').style.display='flex';
 });
 document.getElementById('installBtn').addEventListener('click', async ()=>{
   if (!prompt$) return; prompt$.prompt(); await prompt$.userChoice; prompt$=null;
@@ -791,6 +971,7 @@ document.getElementById('installClose').addEventListener('click', ()=>{
 });
 
 renderAll();
+if (isInstalled()) document.getElementById('installBanner').style.display='none';
 </script>
 </body>
 </html>
