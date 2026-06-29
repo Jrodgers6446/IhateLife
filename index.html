@@ -264,37 +264,6 @@ body {
 .income-card.monthly  .income-amount { color:var(--accent); }
 .income-card.bonus    .income-amount { color:var(--purple); }
 
-/* ── Tax Estimator ── */
-.tax-estimator {
-  margin: 0 20px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-}
-.tax-controls {
-  margin-top: 8px;
-  margin-bottom: 10px;
-}
-.tax-controls .field { margin-bottom: 0; }
-.tax-breakdown { border-top: 1px solid var(--border); padding-top: 10px; }
-.tax-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-}
-.tax-row strong { color: var(--text); }
-.tax-row.total {
-  margin-top: 4px;
-  border-top: 1px dashed var(--border);
-  padding-top: 8px;
-}
-.tax-row.total strong { color: var(--danger); }
-.tax-row.net strong { color: var(--accent); }
 
 /* ── FAB ── */
 .fab {
@@ -468,101 +437,6 @@ body {
     </div>
   </div>
 
-  <div class="tax-estimator">
-    <div class="sum-label">Tax Estimator (ADP-style)</div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>Gross Pay (per selected pay period)</label>
-        <input type="number" id="taxMonthlyPay" placeholder="0.00" step="0.01" min="0">
-      </div>
-      <div class="field">
-        <label>Pay Frequency</label>
-        <select id="taxPayFrequency">
-          <option value="weekly">Weekly</option>
-          <option value="biweekly">Biweekly</option>
-          <option value="semimonthly">Semi-monthly</option>
-          <option value="monthly" selected>Monthly</option>
-        </select>
-      </div>
-    </div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>State</label>
-        <select id="taxState"></select>
-      </div>
-      <div class="field">
-        <label>Filing Status</label>
-        <select id="taxFilingStatus">
-          <option value="single">Single</option>
-          <option value="married">Married Filing Jointly</option>
-          <option value="head">Head of Household</option>
-        </select>
-      </div>
-    </div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>Dependents (fallback)</label>
-        <input type="number" id="taxDependents" placeholder="0" min="0" step="1">
-      </div>
-      <div class="field">
-        <label>W-4 Step 3 Credits ($ annual)</label>
-        <input type="number" id="taxDependentCredits" placeholder="0.00" min="0" step="0.01">
-      </div>
-    </div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>401(k) Contribution (%)</label>
-        <input type="number" id="tax401kPct" placeholder="0" min="0" max="100" step="0.1">
-      </div>
-      <div class="field">
-        <label>Extra Withholding ($/period)</label>
-        <input type="number" id="taxExtraWithholding" placeholder="0.00" min="0" step="0.01">
-      </div>
-    </div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>HSA Pre-tax ($/period)</label>
-        <input type="number" id="taxHsaMonthly" placeholder="0.00" min="0" step="0.01">
-      </div>
-      <div class="field">
-        <label>Medical Pre-tax ($/period)</label>
-        <input type="number" id="taxMedicalMonthly" placeholder="0.00" min="0" step="0.01">
-      </div>
-    </div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>W-4 Step 4a Other Income ($ annual)</label>
-        <input type="number" id="taxW4OtherIncome" placeholder="0.00" min="0" step="0.01">
-      </div>
-      <div class="field">
-        <label>W-4 Step 4b Deductions ($ annual)</label>
-        <input type="number" id="taxW4Deductions" placeholder="0.00" min="0" step="0.01">
-      </div>
-    </div>
-    <div class="field-row tax-controls">
-      <div class="field">
-        <label>Local / City Tax Preset</label>
-        <select id="taxLocalPreset"></select>
-      </div>
-      <div class="field">
-        <label>Local / City Tax Rate (%)</label>
-        <input type="number" id="taxLocalRate" placeholder="0.000" min="0" step="0.001">
-      </div>
-    </div>
-    <div class="tax-breakdown">
-      <div class="tax-row"><span>Pre-tax Deductions</span><strong id="taxPretax">$0.00</strong></div>
-      <div class="tax-row"><span>Federal Income Tax</span><strong id="taxFederal">$0.00</strong></div>
-      <div class="tax-row"><span>Dependent Tax Credits</span><strong id="taxDependentCredit">-$0.00</strong></div>
-      <div class="tax-row"><span>Social Security</span><strong id="taxSocial">$0.00</strong></div>
-      <div class="tax-row"><span>Medicare</span><strong id="taxMedicare">$0.00</strong></div>
-      <div class="tax-row"><span id="taxStateLabel">State Income Tax</span><strong id="taxStateWithholding">$0.00</strong></div>
-      <div class="tax-row"><span id="taxLocalLabel">Local / City Tax</span><strong id="taxLocalWithholding">$0.00</strong></div>
-      <div class="tax-row"><span>Extra Withholding</span><strong id="taxExtra">$0.00</strong></div>
-      <div class="tax-row total"><span>Total Tax</span><strong id="taxTotal">$0.00</strong></div>
-      <div class="tax-row net"><span>Estimated Net Pay</span><strong id="taxNet">$0.00</strong></div>
-    </div>
-    <div class="sum-sub" id="taxEstimatorNote">Estimate only. Uses 2024 annualized withholding logic; actual payroll can differ by employer rules, W-4 setup, and local requirements.</div>
-  </div>
 
   <div class="tabs" id="incomeTabs">
     <button class="tab itab active" data-ifilter="all">All</button>
@@ -672,7 +546,7 @@ body {
       </div>
     </div>
     <div class="calc-preview">
-      <div class="calc-preview-label">Estimated Take-home Paycheck</div>
+      <div class="calc-preview-label">Calculated Paycheck</div>
       <div class="calc-preview-amount" id="calcPreviewAmt">$0.00</div>
       <div class="calc-preview-detail" id="calcPreviewDetail">Enter hours and rate</div>
     </div>
@@ -708,31 +582,11 @@ const isInstalled = () =>
 // ── State ───────────────────────────────────────────────────────
 let bills   = JSON.parse(localStorage.getItem('ihl_bills')   || '[]');
 let incomes = JSON.parse(localStorage.getItem('ihl_incomes') || '[]');
-const TAX_SETTINGS_DEFAULTS = {
-  monthlyPay: '',
-  payFrequency: 'monthly',
-  state: 'CA',
-  filingStatus: 'single',
-  dependents: 0,
-  dependentCreditsAnnual: '',
-  w4OtherIncomeAnnual: '',
-  w4DeductionsAnnual: '',
-  extraWithholding: '',
-  retirement401kPct: '',
-  hsaMonthly: '',
-  medicalMonthly: '',
-  localPreset: 'none',
-  localRatePct: ''
-};
-let storedTaxSettings = {};
-try { storedTaxSettings = JSON.parse(localStorage.getItem('ihl_tax_settings') || '{}') || {}; } catch (_) {}
-let taxSettings = { ...TAX_SETTINGS_DEFAULTS, ...storedTaxSettings };
 let bFilter = 'all', iFilter = 'all';
 let prompt$ = null;
 
 const saveBills   = () => localStorage.setItem('ihl_bills',   JSON.stringify(bills));
 const saveIncomes = () => localStorage.setItem('ihl_incomes', JSON.stringify(incomes));
-const saveTaxSettings = () => localStorage.setItem('ihl_tax_settings', JSON.stringify(taxSettings));
 
 const esc    = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const today  = () => new Date().toISOString().split('T')[0];
@@ -746,10 +600,8 @@ const calcPaycheck = i => {
   const ot=Number(i.overtimeHours)||0, mult=Number(i.overtimeMultiplier)||1.5;
   return hrs*rate + ot*rate*mult;
 };
-const PAY_PERIODS_PER_YEAR = { weekly: 52, biweekly: 26, semimonthly: 24, monthly: 12, bonus: 1 };
-const ESTIMATOR_PAY_FREQUENCIES = ['weekly', 'biweekly', 'semimonthly', 'monthly'];
-const incomeGrossAmount = i => i.grossAmount!=null ? (+i.grossAmount||0) : i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
-const incomeAmount = i => i.takeHomeAmount!=null ? (+i.takeHomeAmount||0) : i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
+const PAY_PERIODS_PER_YEAR = { biweekly: 26, monthly: 12, bonus: 1 };
+const incomeAmount = i => i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
 const moEq = i => i.type==='biweekly' ? incomeAmount(i)*26/12 : i.type==='monthly' ? incomeAmount(i) : 0;
 
 const incomeCalcDetail = i => {
@@ -767,394 +619,18 @@ const HINTS = {
   bonus:    '★ One-time — not counted in monthly recurring total'
 };
 
-const FEDERAL_STANDARD_DEDUCTION = {
-  single: 14600,
-  married: 29200,
-  head: 21900
-};
-const FEDERAL_BRACKETS = {
-  single: [
-    { upTo: 11600, rate: 0.10 }, { upTo: 47150, rate: 0.12 }, { upTo: 100525, rate: 0.22 },
-    { upTo: 191950, rate: 0.24 }, { upTo: 243725, rate: 0.32 }, { upTo: 609350, rate: 0.35 }, { upTo: Infinity, rate: 0.37 }
-  ],
-  married: [
-    { upTo: 23200, rate: 0.10 }, { upTo: 94300, rate: 0.12 }, { upTo: 201050, rate: 0.22 },
-    { upTo: 383900, rate: 0.24 }, { upTo: 487450, rate: 0.32 }, { upTo: 731200, rate: 0.35 }, { upTo: Infinity, rate: 0.37 }
-  ],
-  head: [
-    { upTo: 16550, rate: 0.10 }, { upTo: 63100, rate: 0.12 }, { upTo: 100500, rate: 0.22 },
-    { upTo: 191950, rate: 0.24 }, { upTo: 243700, rate: 0.32 }, { upTo: 609350, rate: 0.35 }, { upTo: Infinity, rate: 0.37 }
-  ]
-};
-const DEPENDENT_CREDIT_PER = 2000;
-const SOCIAL_SECURITY_WAGE_BASE = 168600;
-const ADDITIONAL_MEDICARE_THRESHOLD = 200000;
-const HSA_TAXABLE_STATES = new Set(['CA', 'NJ']);
-
-const STATE_TAX_RATES = {
-  AL: ['Alabama', 0.0400],   AK: ['Alaska', 0.0000],    AZ: ['Arizona', 0.0250],  AR: ['Arkansas', 0.0350],
-  CA: ['California', 0.0600], CO: ['Colorado', 0.0440],  CT: ['Connecticut', 0.0500], DE: ['Delaware', 0.0500],
-  FL: ['Florida', 0.0000],   GA: ['Georgia', 0.0539],   HI: ['Hawaii', 0.0600],   ID: ['Idaho', 0.0550],
-  IL: ['Illinois', 0.0495],  IN: ['Indiana', 0.0300],   IA: ['Iowa', 0.0380],     KS: ['Kansas', 0.0450],
-  KY: ['Kentucky', 0.0450],  LA: ['Louisiana', 0.0300], ME: ['Maine', 0.0500],    MD: ['Maryland', 0.0475],
-  MA: ['Massachusetts', 0.0500], MI: ['Michigan', 0.0425], MN: ['Minnesota', 0.0550], MS: ['Mississippi', 0.0400],
-  MO: ['Missouri', 0.0430],  MT: ['Montana', 0.0470],   NE: ['Nebraska', 0.0450], NV: ['Nevada', 0.0000],
-  NH: ['New Hampshire', 0.0000], NJ: ['New Jersey', 0.0550], NM: ['New Mexico', 0.0400], NY: ['New York', 0.0600],
-  NC: ['North Carolina', 0.0450], ND: ['North Dakota', 0.0250], OH: ['Ohio', 0.0300], OK: ['Oklahoma', 0.0400],
-  OR: ['Oregon', 0.0600],    PA: ['Pennsylvania', 0.0307], RI: ['Rhode Island', 0.0450], SC: ['South Carolina', 0.0400],
-  SD: ['South Dakota', 0.0000], TN: ['Tennessee', 0.0000], TX: ['Texas', 0.0000], UT: ['Utah', 0.0485],
-  VT: ['Vermont', 0.0500],   VA: ['Virginia', 0.0450],   WA: ['Washington', 0.0000], WV: ['West Virginia', 0.0400],
-  WI: ['Wisconsin', 0.0450], WY: ['Wyoming', 0.0000],    DC: ['District of Columbia', 0.0600]
-};
-const LOCAL_TAX_PRESETS = {
-  default: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  NY: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'nyc', label: 'NYC resident', rate: 0.03876 },
-    { key: 'yonkers', label: 'Yonkers resident', rate: 0.01611 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  PA: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'philadelphia', label: 'Philadelphia resident', rate: 0.0375 },
-    { key: 'typical-eit', label: 'Typical local EIT', rate: 0.01 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  OH: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'typical-municipal', label: 'Typical municipal tax', rate: 0.02 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  MD: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'typical-county', label: 'Typical county tax', rate: 0.032 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  IN: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'typical-county', label: 'Typical county tax', rate: 0.015 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  MI: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'detroit-resident', label: 'Detroit resident', rate: 0.024 },
-    { key: 'detroit-nonresident', label: 'Detroit non-resident', rate: 0.012 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ],
-  KY: [
-    { key: 'none', label: 'No local/city tax', rate: 0 },
-    { key: 'typical-county', label: 'Typical county/occupational', rate: 0.0175 },
-    { key: 'custom', label: 'Custom rate', rate: null }
-  ]
-};
-const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
-const pctString = rate => Number((rate * 100).toFixed(3)).toString();
-const getLocalPresets = stateCode => LOCAL_TAX_PRESETS[stateCode] || LOCAL_TAX_PRESETS.default;
-
 function updateCalcPreview() {
-  const type = document.getElementById('iType').value || 'biweekly';
   const i = {
     regularHours: document.getElementById('iRegHours').value,
     hourlyRate: document.getElementById('iHourlyRate').value,
     overtimeHours: document.getElementById('iOtHours').value,
     overtimeMultiplier: document.getElementById('iOtMult').value
   };
-  const gross = calcPaycheck(i);
-  const taxAdj = estimatePaycheckAfterTaxes(gross, type);
-  const stateCode = taxSettings.state || 'CA';
-  const stateName = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[0];
-  document.getElementById('calcPreviewAmt').textContent = fmtM(taxAdj.net);
-  document.getElementById('calcPreviewDetail').textContent = `${incomeCalcDetail(i)} · gross ${fmtM(gross)} → est net ${fmtM(taxAdj.net)} (${stateName})`;
+  const amt = calcPaycheck(i);
+  document.getElementById('calcPreviewAmt').textContent = fmtM(amt);
+  document.getElementById('calcPreviewDetail').textContent = incomeCalcDetail(i);
 }
 
-function calcProgressiveTax(taxableIncome, brackets) {
-  if (taxableIncome <= 0) return 0;
-  let tax = 0;
-  let floor = 0;
-  for (const b of brackets) {
-    const cap = b.upTo;
-    const taxableAtBracket = Math.min(taxableIncome, cap) - floor;
-    if (taxableAtBracket > 0) tax += taxableAtBracket * b.rate;
-    if (taxableIncome <= cap) break;
-    floor = cap;
-  }
-  return tax;
-}
-
-const normalizeEstimatorPayFrequency = freq => ESTIMATOR_PAY_FREQUENCIES.includes(freq) ? freq : 'monthly';
-const periodsForFrequency = freq => PAY_PERIODS_PER_YEAR[normalizeEstimatorPayFrequency(freq)] || 12;
-const parseMoney = v => Math.max(0, Number(v) || 0);
-
-function estimateTaxesByPayPeriod(input) {
-  const payFrequency = normalizeEstimatorPayFrequency(input.payFrequency);
-  const periods = periodsForFrequency(payFrequency);
-  const grossPerPeriod = parseMoney(input.grossPerPeriod);
-  const stateCode = input.state || 'CA';
-  const filingStatus = FEDERAL_STANDARD_DEDUCTION[input.filingStatus] ? input.filingStatus : 'single';
-  const dependents = Math.max(0, Math.floor(Number(input.dependents) || 0));
-  const hasDirectDependentCredits = input.dependentCreditsAnnual != null && String(input.dependentCreditsAnnual).trim() !== '';
-  const dependentCreditsAnnual = hasDirectDependentCredits ? parseMoney(input.dependentCreditsAnnual) : dependents * DEPENDENT_CREDIT_PER;
-  const w4OtherIncomeAnnual = parseMoney(input.w4OtherIncomeAnnual);
-  const w4DeductionsAnnual = parseMoney(input.w4DeductionsAnnual);
-  const retirementPct = clamp((Number(input.retirement401kPct) || 0) / 100, 0, 1);
-  const hsaPerPeriodInput = parseMoney(input.hsaPerPeriod);
-  const medicalPerPeriodInput = parseMoney(input.medicalPerPeriod);
-  const extraWithholdingPerPeriod = parseMoney(input.extraWithholdingPerPeriod);
-  const localRate = clamp((Number(input.localRatePct) || 0) / 100, 0, 1);
-
-  let remaining = grossPerPeriod;
-  const retirementPerPeriod = Math.min(remaining, grossPerPeriod * retirementPct);
-  remaining -= retirementPerPeriod;
-  const hsaPerPeriod = Math.min(remaining, hsaPerPeriodInput);
-  remaining -= hsaPerPeriod;
-  const medicalPerPeriod = Math.min(remaining, medicalPerPeriodInput);
-
-  const annualGross = grossPerPeriod * periods;
-  const pretaxFederalAnnual = (retirementPerPeriod + hsaPerPeriod + medicalPerPeriod) * periods;
-  const pretaxFicaAnnual = (hsaPerPeriod + medicalPerPeriod) * periods;
-  const pretaxStateAnnual = (retirementPerPeriod + medicalPerPeriod + (HSA_TAXABLE_STATES.has(stateCode) ? 0 : hsaPerPeriod)) * periods;
-
-  const annualFederalTaxable = Math.max(
-    0,
-    annualGross - pretaxFederalAnnual + w4OtherIncomeAnnual - FEDERAL_STANDARD_DEDUCTION[filingStatus] - w4DeductionsAnnual
-  );
-  const federalAnnualBeforeCredits = calcProgressiveTax(annualFederalTaxable, FEDERAL_BRACKETS[filingStatus]);
-  const dependentCreditAppliedAnnual = Math.min(federalAnnualBeforeCredits, dependentCreditsAnnual);
-  const federalAnnualAfterCredits = Math.max(0, federalAnnualBeforeCredits - dependentCreditAppliedAnnual);
-
-  const annualFicaTaxable = Math.max(0, annualGross - pretaxFicaAnnual);
-  const socialAnnual = Math.min(annualFicaTaxable, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
-  const medicareAnnual = annualFicaTaxable * 0.0145 + Math.max(0, annualFicaTaxable - ADDITIONAL_MEDICARE_THRESHOLD) * 0.009;
-
-  const stateRate = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[1];
-  const annualStateTaxable = Math.max(0, annualGross - pretaxStateAnnual);
-  const stateAnnual = annualStateTaxable * stateRate;
-  const localAnnual = annualStateTaxable * localRate;
-  const extraAnnual = extraWithholdingPerPeriod * periods;
-  const totalAnnual = federalAnnualAfterCredits + socialAnnual + medicareAnnual + stateAnnual + localAnnual + extraAnnual;
-
-  const totalPerPeriod = totalAnnual / periods;
-  return {
-    payFrequency,
-    periods,
-    perPeriod: {
-      gross: grossPerPeriod,
-      pretax: pretaxFederalAnnual / periods,
-      federalBeforeCredits: federalAnnualBeforeCredits / periods,
-      dependentCreditApplied: dependentCreditAppliedAnnual / periods,
-      social: socialAnnual / periods,
-      medicare: medicareAnnual / periods,
-      state: stateAnnual / periods,
-      local: localAnnual / periods,
-      extra: extraWithholdingPerPeriod,
-      total: totalPerPeriod,
-      net: grossPerPeriod - totalPerPeriod
-    },
-    monthlyEquivalent: {
-      gross: annualGross / 12,
-      total: totalAnnual / 12,
-      net: (annualGross - totalAnnual) / 12
-    }
-  };
-}
-
-function currentTaxInput(grossPerPeriod, payFrequency) {
-  const configuredFrequency = normalizeEstimatorPayFrequency(taxSettings.payFrequency || 'monthly');
-  const configuredPeriods = periodsForFrequency(configuredFrequency);
-  const targetFrequency = normalizeEstimatorPayFrequency(payFrequency || configuredFrequency);
-  const targetPeriods = periodsForFrequency(targetFrequency);
-
-  const annualHsa = parseMoney(taxSettings.hsaMonthly) * configuredPeriods;
-  const annualMedical = parseMoney(taxSettings.medicalMonthly) * configuredPeriods;
-  const annualExtraWithholding = parseMoney(taxSettings.extraWithholding) * configuredPeriods;
-
-  return {
-    grossPerPeriod,
-    payFrequency: targetFrequency,
-    state: taxSettings.state || 'CA',
-    filingStatus: taxSettings.filingStatus || 'single',
-    dependents: taxSettings.dependents || 0,
-    dependentCreditsAnnual: taxSettings.dependentCreditsAnnual || '',
-    w4OtherIncomeAnnual: taxSettings.w4OtherIncomeAnnual || 0,
-    w4DeductionsAnnual: taxSettings.w4DeductionsAnnual || 0,
-    extraWithholdingPerPeriod: annualExtraWithholding / targetPeriods,
-    retirement401kPct: taxSettings.retirement401kPct || 0,
-    hsaPerPeriod: annualHsa / targetPeriods,
-    medicalPerPeriod: annualMedical / targetPeriods,
-    localRatePct: taxSettings.localRatePct || 0
-  };
-}
-
-function estimatePaycheckAfterTaxes(grossPay, payType) {
-  const targetFrequency = payType === 'bonus'
-    ? normalizeEstimatorPayFrequency(taxSettings.payFrequency || 'monthly')
-    : normalizeEstimatorPayFrequency(payType || 'monthly');
-  const out = estimateTaxesByPayPeriod(currentTaxInput(grossPay, targetFrequency));
-  return {
-    net: out.perPeriod.net,
-    tax: out.perPeriod.total
-  };
-}
-
-function updateTaxPreview() {
-  const payEl = document.getElementById('taxMonthlyPay');
-  const payFreqEl = document.getElementById('taxPayFrequency');
-  const stateEl = document.getElementById('taxState');
-  const filingStatusEl = document.getElementById('taxFilingStatus');
-  const dependentsEl = document.getElementById('taxDependents');
-  const dependentCreditsEl = document.getElementById('taxDependentCredits');
-  const extraEl = document.getElementById('taxExtraWithholding');
-  const four01kEl = document.getElementById('tax401kPct');
-  const hsaEl = document.getElementById('taxHsaMonthly');
-  const medEl = document.getElementById('taxMedicalMonthly');
-  const w4OtherIncomeEl = document.getElementById('taxW4OtherIncome');
-  const w4DeductionsEl = document.getElementById('taxW4Deductions');
-  const localRateEl = document.getElementById('taxLocalRate');
-  const localPresetEl = document.getElementById('taxLocalPreset');
-  if (!payEl || !payFreqEl || !stateEl || !filingStatusEl || !dependentsEl || !dependentCreditsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !w4OtherIncomeEl || !w4DeductionsEl || !localRateEl || !localPresetEl) return;
-
-  const stateCode = stateEl.value || 'CA';
-  const stateName = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[0];
-  const payFrequency = normalizeEstimatorPayFrequency(payFreqEl.value || 'monthly');
-  const localPreset = getLocalPresets(stateCode).find(p => p.key === localPresetEl.value);
-  const out = estimateTaxesByPayPeriod({
-    grossPerPeriod: payEl.value,
-    payFrequency,
-    state: stateCode,
-    filingStatus: filingStatusEl.value,
-    dependents: dependentsEl.value,
-    dependentCreditsAnnual: dependentCreditsEl.value,
-    w4OtherIncomeAnnual: w4OtherIncomeEl.value,
-    w4DeductionsAnnual: w4DeductionsEl.value,
-    extraWithholdingPerPeriod: extraEl.value,
-    retirement401kPct: four01kEl.value,
-    hsaPerPeriod: hsaEl.value,
-    medicalPerPeriod: medEl.value,
-    localRatePct: localRateEl.value
-  });
-  const per = out.perPeriod;
-  const payLabels = { weekly: 'weekly check', biweekly: 'biweekly check', semimonthly: 'semi-monthly check', monthly: 'monthly check' };
-
-  document.getElementById('taxStateLabel').textContent = `${stateName} State Tax`;
-  document.getElementById('taxLocalLabel').textContent = localPreset && localPreset.key !== 'none'
-    ? `Local Tax (${localPreset.label})`
-    : 'Local / City Tax';
-  document.getElementById('taxPretax').textContent = fmtM(per.pretax);
-  document.getElementById('taxFederal').textContent = fmtM(per.federalBeforeCredits);
-  document.getElementById('taxDependentCredit').textContent = `-${fmtM(per.dependentCreditApplied)}`;
-  document.getElementById('taxSocial').textContent = fmtM(per.social);
-  document.getElementById('taxMedicare').textContent = fmtM(per.medicare);
-  document.getElementById('taxStateWithholding').textContent = fmtM(per.state);
-  document.getElementById('taxLocalWithholding').textContent = fmtM(per.local);
-  document.getElementById('taxExtra').textContent = fmtM(per.extra);
-  document.getElementById('taxTotal').textContent = fmtM(per.total);
-  document.getElementById('taxNet').textContent = fmtM(per.net);
-  const noteEl = document.getElementById('taxEstimatorNote');
-  if (noteEl) {
-    noteEl.textContent = `Per ${payLabels[payFrequency] || 'pay period'} estimate. Monthly net equivalent: ${fmtM(out.monthlyEquivalent.net)}. Uses annualized 2024 withholding logic; actual payroll can differ.`;
-  }
-  const incomeOverlay = document.getElementById('incomeOverlay');
-  if (incomeOverlay && incomeOverlay.classList.contains('open')) updateCalcPreview();
-}
-
-function initTaxEstimator() {
-  const payEl = document.getElementById('taxMonthlyPay');
-  const payFreqEl = document.getElementById('taxPayFrequency');
-  const stateEl = document.getElementById('taxState');
-  const filingStatusEl = document.getElementById('taxFilingStatus');
-  const dependentsEl = document.getElementById('taxDependents');
-  const dependentCreditsEl = document.getElementById('taxDependentCredits');
-  const extraEl = document.getElementById('taxExtraWithholding');
-  const four01kEl = document.getElementById('tax401kPct');
-  const hsaEl = document.getElementById('taxHsaMonthly');
-  const medEl = document.getElementById('taxMedicalMonthly');
-  const w4OtherIncomeEl = document.getElementById('taxW4OtherIncome');
-  const w4DeductionsEl = document.getElementById('taxW4Deductions');
-  const localPresetEl = document.getElementById('taxLocalPreset');
-  const localRateEl = document.getElementById('taxLocalRate');
-  if (!payEl || !payFreqEl || !stateEl || !filingStatusEl || !dependentsEl || !dependentCreditsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !w4OtherIncomeEl || !w4DeductionsEl || !localPresetEl || !localRateEl) return;
-
-  const writeTaxSettings = () => {
-    taxSettings = {
-      ...taxSettings,
-      monthlyPay: payEl.value,
-      payFrequency: payFreqEl.value,
-      state: stateEl.value,
-      filingStatus: filingStatusEl.value,
-      dependents: dependentsEl.value,
-      dependentCreditsAnnual: dependentCreditsEl.value,
-      w4OtherIncomeAnnual: w4OtherIncomeEl.value,
-      w4DeductionsAnnual: w4DeductionsEl.value,
-      extraWithholding: extraEl.value,
-      retirement401kPct: four01kEl.value,
-      hsaMonthly: hsaEl.value,
-      medicalMonthly: medEl.value,
-      localPreset: localPresetEl.value,
-      localRatePct: localRateEl.value
-    };
-    saveTaxSettings();
-  };
-  const populateLocalPresets = preferred => {
-    const presets = getLocalPresets(stateEl.value);
-    localPresetEl.innerHTML = presets.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
-    const nextPreset = presets.some(p => p.key === preferred) ? preferred : 'none';
-    localPresetEl.value = nextPreset;
-    const chosen = presets.find(p => p.key === nextPreset);
-    if (!taxSettings.localRatePct || nextPreset !== 'custom') {
-      localRateEl.value = chosen && chosen.rate != null ? pctString(chosen.rate) : (taxSettings.localRatePct || '');
-    }
-  };
-
-  const states = Object.entries(STATE_TAX_RATES).sort((a, b) => a[1][0].localeCompare(b[1][0]));
-  stateEl.innerHTML = states.map(([code, info]) => `<option value="${code}">${info[0]} (${code})</option>`).join('');
-
-  payEl.value = taxSettings.monthlyPay || '';
-  payFreqEl.value = normalizeEstimatorPayFrequency(taxSettings.payFrequency || 'monthly');
-  stateEl.value = STATE_TAX_RATES[taxSettings.state] ? taxSettings.state : 'CA';
-  filingStatusEl.value = FEDERAL_STANDARD_DEDUCTION[taxSettings.filingStatus] ? taxSettings.filingStatus : 'single';
-  dependentsEl.value = taxSettings.dependents || 0;
-  dependentCreditsEl.value = taxSettings.dependentCreditsAnnual || '';
-  w4OtherIncomeEl.value = taxSettings.w4OtherIncomeAnnual || '';
-  w4DeductionsEl.value = taxSettings.w4DeductionsAnnual || '';
-  extraEl.value = taxSettings.extraWithholding || '';
-  four01kEl.value = taxSettings.retirement401kPct || '';
-  hsaEl.value = taxSettings.hsaMonthly || '';
-  medEl.value = taxSettings.medicalMonthly || '';
-  localRateEl.value = taxSettings.localRatePct || '';
-  populateLocalPresets(taxSettings.localPreset || 'none');
-
-  stateEl.addEventListener('change', () => {
-    populateLocalPresets(localPresetEl.value);
-    writeTaxSettings();
-    updateTaxPreview();
-  });
-  localPresetEl.addEventListener('change', () => {
-    const selected = getLocalPresets(stateEl.value).find(p => p.key === localPresetEl.value);
-    if (selected && selected.rate != null) localRateEl.value = pctString(selected.rate);
-    writeTaxSettings();
-    updateTaxPreview();
-  });
-  localRateEl.addEventListener('input', () => {
-    if (localPresetEl.value !== 'custom') localPresetEl.value = 'custom';
-    writeTaxSettings();
-    updateTaxPreview();
-  });
-  [payEl, payFreqEl, filingStatusEl, dependentsEl, dependentCreditsEl, extraEl, four01kEl, hsaEl, medEl, w4OtherIncomeEl, w4DeductionsEl].forEach(el => {
-    el.addEventListener('input', () => {
-      writeTaxSettings();
-      updateTaxPreview();
-    });
-    el.addEventListener('change', () => {
-      writeTaxSettings();
-      updateTaxPreview();
-    });
-  });
-
-  updateTaxPreview();
-}
 
 // ── Bills Render ─────────────────────────────────────────────────
 function renderBills() {
@@ -1251,7 +727,6 @@ function renderIncome() {
   document.getElementById('netAfter').textContent  = fmtM(net);
   document.getElementById('netAfter').className    = 'sum-value '+(net>=0?'pos':'neg');
   document.getElementById('netEq').textContent     = `Income ${fmtM(monthly)} − Bills ${fmtM(monthBills)} = ${fmtM(net)}`;
-  updateTaxPreview();
 
   // List
   let f = [...incomes];
@@ -1270,9 +745,6 @@ function renderIncome() {
   const pills  = {biweekly:'blue', monthly:'green', bonus:'purple'};
 
   el.innerHTML = f.map(inc => {
-    const grossAmt = incomeGrossAmount(inc);
-    const netAmt = incomeAmount(inc);
-    const taxDelta = Math.max(0, grossAmt - netAmt);
     const dateF = inc.type==='bonus' ? inc.bonusDate : inc.nextPay;
     const d = dateF ? daysTo(dateF) : null;
     const soon = d!==null && d>=0 && d<=3;
@@ -1284,7 +756,7 @@ function renderIncome() {
         nextTxt = d>=0 ? `Expected in ${d}d` : `Expected ${fmtD(dateF)}`;
       }
     }
-    const mono = inc.hourlyRate!=null ? `${incomeCalcDetail(inc)} · gross ${fmtM(grossAmt)} → net ${fmtM(netAmt)}${taxDelta ? ` · tax ${fmtM(taxDelta)}` : ''}`
+    const mono = inc.hourlyRate!=null ? incomeCalcDetail(inc)
                : inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
                : inc.type==='monthly'  ? 'per month'
                : 'one-time';
@@ -1300,7 +772,7 @@ function renderIncome() {
         <div class="income-mono">${mono}${inc.hourlyRate!=null && inc.type!=='bonus' ? ` · ≈ ${fmtM(moEq(inc))}/mo` : ''}</div>
       </div>
       <div class="income-right">
-        <div class="income-amount">${fmtM(netAmt)}</div>
+        <div class="income-amount">${fmtM(incomeAmount(inc))}</div>
         <div class="card-actions">
           <button class="card-btn" onclick="editIncome('${inc.id}')" title="Edit">✏️</button>
           <button class="card-btn danger" onclick="deleteIncome('${inc.id}')" title="Delete">🗑</button>
@@ -1394,9 +866,8 @@ function openIncomeSheet(id) {
       document.getElementById('iHourlyRate').value = inc.hourlyRate;
       document.getElementById('iOtHours').value = inc.overtimeHours ?? 0;
       document.getElementById('iOtMult').value = String(inc.overtimeMultiplier ?? 1.5);
-    } else if (inc.grossAmount || inc.amount) {
-      const gross = Number(inc.grossAmount ?? inc.amount) || 0;
-      document.getElementById('iHourlyRate').value = (gross / 40).toFixed(2);
+    } else if (inc.amount) {
+      document.getElementById('iHourlyRate').value = (inc.amount / 40).toFixed(2);
       document.getElementById('iRegHours').value = '40';
     }
     document.getElementById('iNotes').value = inc.notes || '';
@@ -1447,16 +918,10 @@ document.getElementById('saveIncome').onclick = () => {
   const overtimeMultiplier=parseFloat(document.getElementById('iOtMult').value)||1.5;
   if (!name) { alert('Fill in source name.'); return; }
   if (!document.getElementById('iHourlyRate').value) { alert('Enter an hourly rate.'); return; }
-  const grossAmount = calcPaycheck({ regularHours, hourlyRate, overtimeHours, overtimeMultiplier });
-  if (grossAmount <= 0) { alert('Calculated paycheck must be greater than $0.'); return; }
-  const taxAdj = estimatePaycheckAfterTaxes(grossAmount, type);
+  const amount = calcPaycheck({ regularHours, hourlyRate, overtimeHours, overtimeMultiplier });
+  if (amount <= 0) { alert('Calculated paycheck must be greater than $0.'); return; }
   const entry = {
-    name, type,
-    amount: grossAmount,
-    grossAmount,
-    takeHomeAmount: taxAdj.net,
-    taxWithheld: taxAdj.tax,
-    taxAutoApplied: true,
+    name, type, amount,
     regularHours, hourlyRate, overtimeHours, overtimeMultiplier,
     notes: document.getElementById('iNotes').value.trim()
   };
@@ -1511,7 +976,6 @@ document.getElementById('installClose').addEventListener('click', ()=>{
 });
 
 renderAll();
-initTaxEstimator();
 if (isInstalled()) document.getElementById('installBanner').style.display='none';
 </script>
 </body>
