@@ -521,34 +521,9 @@ body {
       </select>
     </div>
     <div class="type-hint" id="typeHint">↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)</div>
-    <div class="field-row">
-      <div class="field">
-        <label>Regular Hours</label>
-        <input type="number" id="iRegHours" placeholder="40" step="0.25" min="0" value="40">
-      </div>
-      <div class="field">
-        <label>Hourly Rate ($)</label>
-        <input type="number" id="iHourlyRate" placeholder="0.00" step="0.01" min="0">
-      </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Overtime Hours</label>
-        <input type="number" id="iOtHours" placeholder="0" step="0.25" min="0" value="0">
-      </div>
-      <div class="field">
-        <label>OT Multiplier</label>
-        <select id="iOtMult">
-          <option value="1.5">1.5× time and a half</option>
-          <option value="2">2× double time</option>
-          <option value="1">1× straight time</option>
-        </select>
-      </div>
-    </div>
-    <div class="calc-preview">
-      <div class="calc-preview-label">Calculated Paycheck</div>
-      <div class="calc-preview-amount" id="calcPreviewAmt">$0.00</div>
-      <div class="calc-preview-detail" id="calcPreviewDetail">Enter hours and rate</div>
+    <div class="field">
+      <label>Paycheck Amount ($)</label>
+      <input type="number" id="iAmount" placeholder="0.00" step="0.01" min="0">
     </div>
     <div class="field" id="nextPayRow">
       <label>Next Pay Date</label>
@@ -601,36 +576,14 @@ const calcPaycheck = i => {
   return hrs*rate + ot*rate*mult;
 };
 const PAY_PERIODS_PER_YEAR = { biweekly: 26, monthly: 12, bonus: 1 };
-const incomeAmount = i => i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
+const incomeAmount = i => (+i.amount||0);
 const moEq = i => i.type==='biweekly' ? incomeAmount(i)*26/12 : i.type==='monthly' ? incomeAmount(i) : 0;
-
-const incomeCalcDetail = i => {
-  const hrs=Number(i.regularHours)||0, rate=Number(i.hourlyRate)||0;
-  const ot=Number(i.overtimeHours)||0, mult=Number(i.overtimeMultiplier)||1.5;
-  if (!rate) return '—';
-  const parts = [`${hrs}h × ${fmtM(rate)}`];
-  if (ot>0) parts.push(`${ot}h OT × ${mult}×`);
-  return parts.join(' + ');
-};
 
 const HINTS = {
   biweekly: '↻ Every 2 weeks — ~26 checks/yr (~2.17×/mo)',
   monthly:  '↻ Once per month — 12 payments/yr',
   bonus:    '★ One-time — not counted in monthly recurring total'
 };
-
-function updateCalcPreview() {
-  const i = {
-    regularHours: document.getElementById('iRegHours').value,
-    hourlyRate: document.getElementById('iHourlyRate').value,
-    overtimeHours: document.getElementById('iOtHours').value,
-    overtimeMultiplier: document.getElementById('iOtMult').value
-  };
-  const amt = calcPaycheck(i);
-  document.getElementById('calcPreviewAmt').textContent = fmtM(amt);
-  document.getElementById('calcPreviewDetail').textContent = incomeCalcDetail(i);
-}
-
 
 // ── Bills Render ─────────────────────────────────────────────────
 function renderBills() {
@@ -756,8 +709,7 @@ function renderIncome() {
         nextTxt = d>=0 ? `Expected in ${d}d` : `Expected ${fmtD(dateF)}`;
       }
     }
-    const mono = inc.hourlyRate!=null ? incomeCalcDetail(inc)
-               : inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
+    const mono = inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
                : inc.type==='monthly'  ? 'per month'
                : 'one-time';
     return `<div class="income-card ${inc.type}">
@@ -769,7 +721,7 @@ function renderIncome() {
           <span class="pill ${pills[inc.type]}">${labels[inc.type]}</span>
           ${inc.notes?`<span class="pill">${esc(inc.notes)}</span>`:''}
         </div>
-        <div class="income-mono">${mono}${inc.hourlyRate!=null && inc.type!=='bonus' ? ` · ≈ ${fmtM(moEq(inc))}/mo` : ''}</div>
+        <div class="income-mono">${mono}</div>
       </div>
       <div class="income-right">
         <div class="income-amount">${fmtM(incomeAmount(inc))}</div>
@@ -835,10 +787,7 @@ function resetIncomeForm() {
   document.getElementById('saveIncome').textContent = 'Add Paycheck';
   document.getElementById('iName').value = '';
   document.getElementById('iType').value = 'biweekly';
-  document.getElementById('iRegHours').value = '40';
-  document.getElementById('iHourlyRate').value = '';
-  document.getElementById('iOtHours').value = '0';
-  document.getElementById('iOtMult').value = '1.5';
+  document.getElementById('iAmount').value = '';
   document.getElementById('iNotes').value = '';
   document.getElementById('typeHint').textContent = HINTS.biweekly;
   document.getElementById('nextPayRow').style.display = '';
@@ -847,7 +796,6 @@ function resetIncomeForm() {
   const s = d.toISOString().split('T')[0];
   document.getElementById('iNextPay').value = s;
   document.getElementById('iBonusDate').value = s;
-  updateCalcPreview();
 }
 
 function openIncomeSheet(id) {
@@ -861,19 +809,10 @@ function openIncomeSheet(id) {
     document.getElementById('iName').value = inc.name;
     document.getElementById('iType').value = inc.type;
     document.getElementById('iType').dispatchEvent(new Event('change'));
-    if (inc.hourlyRate != null) {
-      document.getElementById('iRegHours').value = inc.regularHours ?? 40;
-      document.getElementById('iHourlyRate').value = inc.hourlyRate;
-      document.getElementById('iOtHours').value = inc.overtimeHours ?? 0;
-      document.getElementById('iOtMult').value = String(inc.overtimeMultiplier ?? 1.5);
-    } else if (inc.amount) {
-      document.getElementById('iHourlyRate').value = (inc.amount / 40).toFixed(2);
-      document.getElementById('iRegHours').value = '40';
-    }
+    document.getElementById('iAmount').value = inc.amount ?? (inc.hourlyRate!=null ? calcPaycheck(inc) : '');
     document.getElementById('iNotes').value = inc.notes || '';
     if (inc.type === 'bonus') document.getElementById('iBonusDate').value = inc.bonusDate || '';
     else document.getElementById('iNextPay').value = inc.nextPay || '';
-    updateCalcPreview();
   }
   document.getElementById('incomeOverlay').classList.add('open');
 }
@@ -904,25 +843,17 @@ document.getElementById('iType').addEventListener('change', function() {
   const isBonus = this.value==='bonus';
   document.getElementById('nextPayRow').style.display   = isBonus?'none':'';
   document.getElementById('bonusDateRow').style.display = isBonus?'':'none';
-  updateCalcPreview();
 });
-['iRegHours','iHourlyRate','iOtHours','iOtMult'].forEach(id =>
-  document.getElementById(id).addEventListener('input', updateCalcPreview));
 document.getElementById('openAddIncome').onclick = () => openIncomeSheet();
 document.getElementById('incomeOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
 document.getElementById('saveIncome').onclick = () => {
   const name=document.getElementById('iName').value.trim(), type=document.getElementById('iType').value;
-  const regularHours=parseFloat(document.getElementById('iRegHours').value)||0;
-  const hourlyRate=parseFloat(document.getElementById('iHourlyRate').value);
-  const overtimeHours=parseFloat(document.getElementById('iOtHours').value)||0;
-  const overtimeMultiplier=parseFloat(document.getElementById('iOtMult').value)||1.5;
+  const amount=parseFloat(document.getElementById('iAmount').value);
   if (!name) { alert('Fill in source name.'); return; }
-  if (!document.getElementById('iHourlyRate').value) { alert('Enter an hourly rate.'); return; }
-  const amount = calcPaycheck({ regularHours, hourlyRate, overtimeHours, overtimeMultiplier });
-  if (amount <= 0) { alert('Calculated paycheck must be greater than $0.'); return; }
+  if (!document.getElementById('iAmount').value) { alert('Enter a paycheck amount.'); return; }
+  if (!(amount > 0)) { alert('Paycheck amount must be greater than $0.'); return; }
   const entry = {
     name, type, amount,
-    regularHours, hourlyRate, overtimeHours, overtimeMultiplier,
     notes: document.getElementById('iNotes').value.trim()
   };
   if (type==='bonus') entry.bonusDate=document.getElementById('iBonusDate').value;
