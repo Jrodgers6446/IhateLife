@@ -469,18 +469,27 @@ body {
   </div>
 
   <div class="tax-estimator">
-    <div class="sum-label">Monthly Tax Estimator</div>
+    <div class="sum-label">Tax Estimator (ADP-style)</div>
     <div class="field-row tax-controls">
       <div class="field">
-        <label>Monthly Gross Pay ($)</label>
+        <label>Gross Pay (per selected pay period)</label>
         <input type="number" id="taxMonthlyPay" placeholder="0.00" step="0.01" min="0">
       </div>
+      <div class="field">
+        <label>Pay Frequency</label>
+        <select id="taxPayFrequency">
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Biweekly</option>
+          <option value="semimonthly">Semi-monthly</option>
+          <option value="monthly" selected>Monthly</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row tax-controls">
       <div class="field">
         <label>State</label>
         <select id="taxState"></select>
       </div>
-    </div>
-    <div class="field-row tax-controls">
       <div class="field">
         <label>Filing Status</label>
         <select id="taxFilingStatus">
@@ -489,9 +498,15 @@ body {
           <option value="head">Head of Household</option>
         </select>
       </div>
+    </div>
+    <div class="field-row tax-controls">
       <div class="field">
-        <label>Dependents</label>
+        <label>Dependents (fallback)</label>
         <input type="number" id="taxDependents" placeholder="0" min="0" step="1">
+      </div>
+      <div class="field">
+        <label>W-4 Step 3 Credits ($ annual)</label>
+        <input type="number" id="taxDependentCredits" placeholder="0.00" min="0" step="0.01">
       </div>
     </div>
     <div class="field-row tax-controls">
@@ -500,18 +515,28 @@ body {
         <input type="number" id="tax401kPct" placeholder="0" min="0" max="100" step="0.1">
       </div>
       <div class="field">
-        <label>Extra Withholding ($/mo)</label>
+        <label>Extra Withholding ($/period)</label>
         <input type="number" id="taxExtraWithholding" placeholder="0.00" min="0" step="0.01">
       </div>
     </div>
     <div class="field-row tax-controls">
       <div class="field">
-        <label>HSA Pre-tax ($/mo)</label>
+        <label>HSA Pre-tax ($/period)</label>
         <input type="number" id="taxHsaMonthly" placeholder="0.00" min="0" step="0.01">
       </div>
       <div class="field">
-        <label>Medical Pre-tax ($/mo)</label>
+        <label>Medical Pre-tax ($/period)</label>
         <input type="number" id="taxMedicalMonthly" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="field-row tax-controls">
+      <div class="field">
+        <label>W-4 Step 4a Other Income ($ annual)</label>
+        <input type="number" id="taxW4OtherIncome" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>W-4 Step 4b Deductions ($ annual)</label>
+        <input type="number" id="taxW4Deductions" placeholder="0.00" min="0" step="0.01">
       </div>
     </div>
     <div class="field-row tax-controls">
@@ -536,7 +561,7 @@ body {
       <div class="tax-row total"><span>Total Tax</span><strong id="taxTotal">$0.00</strong></div>
       <div class="tax-row net"><span>Estimated Net Pay</span><strong id="taxNet">$0.00</strong></div>
     </div>
-    <div class="sum-sub">Estimate only. Uses 2024 brackets and common assumptions; actual payroll withholding can differ by W-4, local rules, and benefits setup.</div>
+    <div class="sum-sub" id="taxEstimatorNote">Estimate only. Uses 2024 annualized withholding logic; actual payroll can differ by employer rules, W-4 setup, and local requirements.</div>
   </div>
 
   <div class="tabs" id="incomeTabs">
@@ -685,9 +710,13 @@ let bills   = JSON.parse(localStorage.getItem('ihl_bills')   || '[]');
 let incomes = JSON.parse(localStorage.getItem('ihl_incomes') || '[]');
 const TAX_SETTINGS_DEFAULTS = {
   monthlyPay: '',
+  payFrequency: 'monthly',
   state: 'CA',
   filingStatus: 'single',
   dependents: 0,
+  dependentCreditsAnnual: '',
+  w4OtherIncomeAnnual: '',
+  w4DeductionsAnnual: '',
   extraWithholding: '',
   retirement401kPct: '',
   hsaMonthly: '',
@@ -717,7 +746,8 @@ const calcPaycheck = i => {
   const ot=Number(i.overtimeHours)||0, mult=Number(i.overtimeMultiplier)||1.5;
   return hrs*rate + ot*rate*mult;
 };
-const PAY_PERIODS_PER_YEAR = { biweekly: 26, monthly: 12, bonus: 1 };
+const PAY_PERIODS_PER_YEAR = { weekly: 52, biweekly: 26, semimonthly: 24, monthly: 12, bonus: 1 };
+const ESTIMATOR_PAY_FREQUENCIES = ['weekly', 'biweekly', 'semimonthly', 'monthly'];
 const incomeGrossAmount = i => i.grossAmount!=null ? (+i.grossAmount||0) : i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
 const incomeAmount = i => i.takeHomeAmount!=null ? (+i.takeHomeAmount||0) : i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
 const moEq = i => i.type==='biweekly' ? incomeAmount(i)*26/12 : i.type==='monthly' ? incomeAmount(i) : 0;
@@ -854,152 +884,210 @@ function calcProgressiveTax(taxableIncome, brackets) {
   return tax;
 }
 
-function estimateMonthlyTaxes(input) {
-  const gross = Math.max(0, Number(input.monthlyPay) || 0);
-  const stateCode = input.state;
+const normalizeEstimatorPayFrequency = freq => ESTIMATOR_PAY_FREQUENCIES.includes(freq) ? freq : 'monthly';
+const periodsForFrequency = freq => PAY_PERIODS_PER_YEAR[normalizeEstimatorPayFrequency(freq)] || 12;
+const parseMoney = v => Math.max(0, Number(v) || 0);
+
+function estimateTaxesByPayPeriod(input) {
+  const payFrequency = normalizeEstimatorPayFrequency(input.payFrequency);
+  const periods = periodsForFrequency(payFrequency);
+  const grossPerPeriod = parseMoney(input.grossPerPeriod);
+  const stateCode = input.state || 'CA';
   const filingStatus = FEDERAL_STANDARD_DEDUCTION[input.filingStatus] ? input.filingStatus : 'single';
   const dependents = Math.max(0, Math.floor(Number(input.dependents) || 0));
-  const extraMonthly = Math.max(0, Number(input.extraWithholding) || 0);
+  const hasDirectDependentCredits = input.dependentCreditsAnnual != null && String(input.dependentCreditsAnnual).trim() !== '';
+  const dependentCreditsAnnual = hasDirectDependentCredits ? parseMoney(input.dependentCreditsAnnual) : dependents * DEPENDENT_CREDIT_PER;
+  const w4OtherIncomeAnnual = parseMoney(input.w4OtherIncomeAnnual);
+  const w4DeductionsAnnual = parseMoney(input.w4DeductionsAnnual);
   const retirementPct = clamp((Number(input.retirement401kPct) || 0) / 100, 0, 1);
-  const hsaMonthlyInput = Math.max(0, Number(input.hsaMonthly) || 0);
-  const medicalMonthlyInput = Math.max(0, Number(input.medicalMonthly) || 0);
+  const hsaPerPeriodInput = parseMoney(input.hsaPerPeriod);
+  const medicalPerPeriodInput = parseMoney(input.medicalPerPeriod);
+  const extraWithholdingPerPeriod = parseMoney(input.extraWithholdingPerPeriod);
   const localRate = clamp((Number(input.localRatePct) || 0) / 100, 0, 1);
 
-  let remaining = gross;
-  const retirementMonthly = Math.min(remaining, gross * retirementPct);
-  remaining -= retirementMonthly;
-  const hsaMonthly = Math.min(remaining, hsaMonthlyInput);
-  remaining -= hsaMonthly;
-  const medicalMonthly = Math.min(remaining, medicalMonthlyInput);
+  let remaining = grossPerPeriod;
+  const retirementPerPeriod = Math.min(remaining, grossPerPeriod * retirementPct);
+  remaining -= retirementPerPeriod;
+  const hsaPerPeriod = Math.min(remaining, hsaPerPeriodInput);
+  remaining -= hsaPerPeriod;
+  const medicalPerPeriod = Math.min(remaining, medicalPerPeriodInput);
 
-  const pretaxFederalMonthly = retirementMonthly + hsaMonthly + medicalMonthly;
-  const pretaxFicaMonthly = hsaMonthly + medicalMonthly;
-  const pretaxStateMonthly = retirementMonthly + medicalMonthly + (HSA_TAXABLE_STATES.has(stateCode) ? 0 : hsaMonthly);
+  const annualGross = grossPerPeriod * periods;
+  const pretaxFederalAnnual = (retirementPerPeriod + hsaPerPeriod + medicalPerPeriod) * periods;
+  const pretaxFicaAnnual = (hsaPerPeriod + medicalPerPeriod) * periods;
+  const pretaxStateAnnual = (retirementPerPeriod + medicalPerPeriod + (HSA_TAXABLE_STATES.has(stateCode) ? 0 : hsaPerPeriod)) * periods;
 
-  const annualFederalTaxable = Math.max(0, (gross - pretaxFederalMonthly) * 12 - FEDERAL_STANDARD_DEDUCTION[filingStatus]);
+  const annualFederalTaxable = Math.max(
+    0,
+    annualGross - pretaxFederalAnnual + w4OtherIncomeAnnual - FEDERAL_STANDARD_DEDUCTION[filingStatus] - w4DeductionsAnnual
+  );
   const federalAnnualBeforeCredits = calcProgressiveTax(annualFederalTaxable, FEDERAL_BRACKETS[filingStatus]);
-  const dependentCreditAnnual = dependents * DEPENDENT_CREDIT_PER;
-  const dependentCreditAppliedAnnual = Math.min(federalAnnualBeforeCredits, dependentCreditAnnual);
+  const dependentCreditAppliedAnnual = Math.min(federalAnnualBeforeCredits, dependentCreditsAnnual);
   const federalAnnualAfterCredits = Math.max(0, federalAnnualBeforeCredits - dependentCreditAppliedAnnual);
 
-  const annualFicaTaxable = Math.max(0, (gross - pretaxFicaMonthly) * 12);
+  const annualFicaTaxable = Math.max(0, annualGross - pretaxFicaAnnual);
   const socialAnnual = Math.min(annualFicaTaxable, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
   const medicareAnnual = annualFicaTaxable * 0.0145 + Math.max(0, annualFicaTaxable - ADDITIONAL_MEDICARE_THRESHOLD) * 0.009;
 
   const stateRate = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[1];
-  const annualStateTaxable = Math.max(0, (gross - pretaxStateMonthly) * 12);
+  const annualStateTaxable = Math.max(0, annualGross - pretaxStateAnnual);
   const stateAnnual = annualStateTaxable * stateRate;
   const localAnnual = annualStateTaxable * localRate;
-  const extraAnnual = extraMonthly * 12;
-
+  const extraAnnual = extraWithholdingPerPeriod * periods;
   const totalAnnual = federalAnnualAfterCredits + socialAnnual + medicareAnnual + stateAnnual + localAnnual + extraAnnual;
+
+  const totalPerPeriod = totalAnnual / periods;
   return {
-    pretax: pretaxFederalMonthly,
-    federalBeforeCredits: federalAnnualBeforeCredits / 12,
-    dependentCreditApplied: dependentCreditAppliedAnnual / 12,
-    social: socialAnnual / 12,
-    medicare: medicareAnnual / 12,
-    state: stateAnnual / 12,
-    local: localAnnual / 12,
-    extra: extraMonthly,
-    total: totalAnnual / 12,
-    net: gross - totalAnnual / 12
+    payFrequency,
+    periods,
+    perPeriod: {
+      gross: grossPerPeriod,
+      pretax: pretaxFederalAnnual / periods,
+      federalBeforeCredits: federalAnnualBeforeCredits / periods,
+      dependentCreditApplied: dependentCreditAppliedAnnual / periods,
+      social: socialAnnual / periods,
+      medicare: medicareAnnual / periods,
+      state: stateAnnual / periods,
+      local: localAnnual / periods,
+      extra: extraWithholdingPerPeriod,
+      total: totalPerPeriod,
+      net: grossPerPeriod - totalPerPeriod
+    },
+    monthlyEquivalent: {
+      gross: annualGross / 12,
+      total: totalAnnual / 12,
+      net: (annualGross - totalAnnual) / 12
+    }
   };
 }
 
-function currentTaxInput(monthlyPay) {
+function currentTaxInput(grossPerPeriod, payFrequency) {
+  const configuredFrequency = normalizeEstimatorPayFrequency(taxSettings.payFrequency || 'monthly');
+  const configuredPeriods = periodsForFrequency(configuredFrequency);
+  const targetFrequency = normalizeEstimatorPayFrequency(payFrequency || configuredFrequency);
+  const targetPeriods = periodsForFrequency(targetFrequency);
+
+  const annualHsa = parseMoney(taxSettings.hsaMonthly) * configuredPeriods;
+  const annualMedical = parseMoney(taxSettings.medicalMonthly) * configuredPeriods;
+  const annualExtraWithholding = parseMoney(taxSettings.extraWithholding) * configuredPeriods;
+
   return {
-    monthlyPay,
+    grossPerPeriod,
+    payFrequency: targetFrequency,
     state: taxSettings.state || 'CA',
     filingStatus: taxSettings.filingStatus || 'single',
     dependents: taxSettings.dependents || 0,
-    extraWithholding: taxSettings.extraWithholding || 0,
+    dependentCreditsAnnual: taxSettings.dependentCreditsAnnual || '',
+    w4OtherIncomeAnnual: taxSettings.w4OtherIncomeAnnual || 0,
+    w4DeductionsAnnual: taxSettings.w4DeductionsAnnual || 0,
+    extraWithholdingPerPeriod: annualExtraWithholding / targetPeriods,
     retirement401kPct: taxSettings.retirement401kPct || 0,
-    hsaMonthly: taxSettings.hsaMonthly || 0,
-    medicalMonthly: taxSettings.medicalMonthly || 0,
+    hsaPerPeriod: annualHsa / targetPeriods,
+    medicalPerPeriod: annualMedical / targetPeriods,
     localRatePct: taxSettings.localRatePct || 0
   };
 }
 
 function estimatePaycheckAfterTaxes(grossPay, payType) {
-  const gross = Math.max(0, Number(grossPay) || 0);
-  const periods = PAY_PERIODS_PER_YEAR[payType] || 12;
-  if (gross <= 0) return { net: 0, tax: 0 };
-  const monthlyGross = (gross * periods) / 12;
-  const monthly = estimateMonthlyTaxes(currentTaxInput(monthlyGross));
-  const periodTax = monthly.total * (12 / periods);
+  const targetFrequency = payType === 'bonus'
+    ? normalizeEstimatorPayFrequency(taxSettings.payFrequency || 'monthly')
+    : normalizeEstimatorPayFrequency(payType || 'monthly');
+  const out = estimateTaxesByPayPeriod(currentTaxInput(grossPay, targetFrequency));
   return {
-    net: Math.max(0, gross - periodTax),
-    tax: Math.max(0, periodTax)
+    net: out.perPeriod.net,
+    tax: out.perPeriod.total
   };
 }
 
 function updateTaxPreview() {
   const payEl = document.getElementById('taxMonthlyPay');
+  const payFreqEl = document.getElementById('taxPayFrequency');
   const stateEl = document.getElementById('taxState');
   const filingStatusEl = document.getElementById('taxFilingStatus');
   const dependentsEl = document.getElementById('taxDependents');
+  const dependentCreditsEl = document.getElementById('taxDependentCredits');
   const extraEl = document.getElementById('taxExtraWithholding');
   const four01kEl = document.getElementById('tax401kPct');
   const hsaEl = document.getElementById('taxHsaMonthly');
   const medEl = document.getElementById('taxMedicalMonthly');
+  const w4OtherIncomeEl = document.getElementById('taxW4OtherIncome');
+  const w4DeductionsEl = document.getElementById('taxW4Deductions');
   const localRateEl = document.getElementById('taxLocalRate');
   const localPresetEl = document.getElementById('taxLocalPreset');
-  if (!payEl || !stateEl || !filingStatusEl || !dependentsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !localRateEl || !localPresetEl) return;
+  if (!payEl || !payFreqEl || !stateEl || !filingStatusEl || !dependentsEl || !dependentCreditsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !w4OtherIncomeEl || !w4DeductionsEl || !localRateEl || !localPresetEl) return;
 
   const stateCode = stateEl.value || 'CA';
   const stateName = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[0];
+  const payFrequency = normalizeEstimatorPayFrequency(payFreqEl.value || 'monthly');
   const localPreset = getLocalPresets(stateCode).find(p => p.key === localPresetEl.value);
-  const out = estimateMonthlyTaxes({
-    monthlyPay: payEl.value,
+  const out = estimateTaxesByPayPeriod({
+    grossPerPeriod: payEl.value,
+    payFrequency,
     state: stateCode,
     filingStatus: filingStatusEl.value,
     dependents: dependentsEl.value,
-    extraWithholding: extraEl.value,
+    dependentCreditsAnnual: dependentCreditsEl.value,
+    w4OtherIncomeAnnual: w4OtherIncomeEl.value,
+    w4DeductionsAnnual: w4DeductionsEl.value,
+    extraWithholdingPerPeriod: extraEl.value,
     retirement401kPct: four01kEl.value,
-    hsaMonthly: hsaEl.value,
-    medicalMonthly: medEl.value,
+    hsaPerPeriod: hsaEl.value,
+    medicalPerPeriod: medEl.value,
     localRatePct: localRateEl.value
   });
+  const per = out.perPeriod;
+  const payLabels = { weekly: 'weekly check', biweekly: 'biweekly check', semimonthly: 'semi-monthly check', monthly: 'monthly check' };
 
   document.getElementById('taxStateLabel').textContent = `${stateName} State Tax`;
   document.getElementById('taxLocalLabel').textContent = localPreset && localPreset.key !== 'none'
     ? `Local Tax (${localPreset.label})`
     : 'Local / City Tax';
-  document.getElementById('taxPretax').textContent = fmtM(out.pretax);
-  document.getElementById('taxFederal').textContent = fmtM(out.federalBeforeCredits);
-  document.getElementById('taxDependentCredit').textContent = `-${fmtM(out.dependentCreditApplied)}`;
-  document.getElementById('taxSocial').textContent = fmtM(out.social);
-  document.getElementById('taxMedicare').textContent = fmtM(out.medicare);
-  document.getElementById('taxStateWithholding').textContent = fmtM(out.state);
-  document.getElementById('taxLocalWithholding').textContent = fmtM(out.local);
-  document.getElementById('taxExtra').textContent = fmtM(out.extra);
-  document.getElementById('taxTotal').textContent = fmtM(out.total);
-  document.getElementById('taxNet').textContent = fmtM(out.net);
+  document.getElementById('taxPretax').textContent = fmtM(per.pretax);
+  document.getElementById('taxFederal').textContent = fmtM(per.federalBeforeCredits);
+  document.getElementById('taxDependentCredit').textContent = `-${fmtM(per.dependentCreditApplied)}`;
+  document.getElementById('taxSocial').textContent = fmtM(per.social);
+  document.getElementById('taxMedicare').textContent = fmtM(per.medicare);
+  document.getElementById('taxStateWithholding').textContent = fmtM(per.state);
+  document.getElementById('taxLocalWithholding').textContent = fmtM(per.local);
+  document.getElementById('taxExtra').textContent = fmtM(per.extra);
+  document.getElementById('taxTotal').textContent = fmtM(per.total);
+  document.getElementById('taxNet').textContent = fmtM(per.net);
+  const noteEl = document.getElementById('taxEstimatorNote');
+  if (noteEl) {
+    noteEl.textContent = `Per ${payLabels[payFrequency] || 'pay period'} estimate. Monthly net equivalent: ${fmtM(out.monthlyEquivalent.net)}. Uses annualized 2024 withholding logic; actual payroll can differ.`;
+  }
   const incomeOverlay = document.getElementById('incomeOverlay');
   if (incomeOverlay && incomeOverlay.classList.contains('open')) updateCalcPreview();
 }
 
 function initTaxEstimator() {
   const payEl = document.getElementById('taxMonthlyPay');
+  const payFreqEl = document.getElementById('taxPayFrequency');
   const stateEl = document.getElementById('taxState');
   const filingStatusEl = document.getElementById('taxFilingStatus');
   const dependentsEl = document.getElementById('taxDependents');
+  const dependentCreditsEl = document.getElementById('taxDependentCredits');
   const extraEl = document.getElementById('taxExtraWithholding');
   const four01kEl = document.getElementById('tax401kPct');
   const hsaEl = document.getElementById('taxHsaMonthly');
   const medEl = document.getElementById('taxMedicalMonthly');
+  const w4OtherIncomeEl = document.getElementById('taxW4OtherIncome');
+  const w4DeductionsEl = document.getElementById('taxW4Deductions');
   const localPresetEl = document.getElementById('taxLocalPreset');
   const localRateEl = document.getElementById('taxLocalRate');
-  if (!payEl || !stateEl || !filingStatusEl || !dependentsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !localPresetEl || !localRateEl) return;
+  if (!payEl || !payFreqEl || !stateEl || !filingStatusEl || !dependentsEl || !dependentCreditsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !w4OtherIncomeEl || !w4DeductionsEl || !localPresetEl || !localRateEl) return;
 
   const writeTaxSettings = () => {
     taxSettings = {
       ...taxSettings,
       monthlyPay: payEl.value,
+      payFrequency: payFreqEl.value,
       state: stateEl.value,
       filingStatus: filingStatusEl.value,
       dependents: dependentsEl.value,
+      dependentCreditsAnnual: dependentCreditsEl.value,
+      w4OtherIncomeAnnual: w4OtherIncomeEl.value,
+      w4DeductionsAnnual: w4DeductionsEl.value,
       extraWithholding: extraEl.value,
       retirement401kPct: four01kEl.value,
       hsaMonthly: hsaEl.value,
@@ -1024,9 +1112,13 @@ function initTaxEstimator() {
   stateEl.innerHTML = states.map(([code, info]) => `<option value="${code}">${info[0]} (${code})</option>`).join('');
 
   payEl.value = taxSettings.monthlyPay || '';
+  payFreqEl.value = normalizeEstimatorPayFrequency(taxSettings.payFrequency || 'monthly');
   stateEl.value = STATE_TAX_RATES[taxSettings.state] ? taxSettings.state : 'CA';
   filingStatusEl.value = FEDERAL_STANDARD_DEDUCTION[taxSettings.filingStatus] ? taxSettings.filingStatus : 'single';
   dependentsEl.value = taxSettings.dependents || 0;
+  dependentCreditsEl.value = taxSettings.dependentCreditsAnnual || '';
+  w4OtherIncomeEl.value = taxSettings.w4OtherIncomeAnnual || '';
+  w4DeductionsEl.value = taxSettings.w4DeductionsAnnual || '';
   extraEl.value = taxSettings.extraWithholding || '';
   four01kEl.value = taxSettings.retirement401kPct || '';
   hsaEl.value = taxSettings.hsaMonthly || '';
@@ -1050,7 +1142,7 @@ function initTaxEstimator() {
     writeTaxSettings();
     updateTaxPreview();
   });
-  [payEl, filingStatusEl, dependentsEl, extraEl, four01kEl, hsaEl, medEl].forEach(el => {
+  [payEl, payFreqEl, filingStatusEl, dependentsEl, dependentCreditsEl, extraEl, four01kEl, hsaEl, medEl, w4OtherIncomeEl, w4DeductionsEl].forEach(el => {
     el.addEventListener('input', () => {
       writeTaxSettings();
       updateTaxPreview();
