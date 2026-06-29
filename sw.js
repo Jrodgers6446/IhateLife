@@ -1,4 +1,4 @@
-const CACHE = 'ihl-v5';
+const CACHE = 'ihl-v6';
 const PRECACHE = [
   './',
   './index.html',

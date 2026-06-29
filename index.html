@@ -647,7 +647,7 @@ body {
       </div>
     </div>
     <div class="calc-preview">
-      <div class="calc-preview-label">Calculated Paycheck</div>
+      <div class="calc-preview-label">Estimated Take-home Paycheck</div>
       <div class="calc-preview-amount" id="calcPreviewAmt">$0.00</div>
       <div class="calc-preview-detail" id="calcPreviewDetail">Enter hours and rate</div>
     </div>
@@ -717,7 +717,9 @@ const calcPaycheck = i => {
   const ot=Number(i.overtimeHours)||0, mult=Number(i.overtimeMultiplier)||1.5;
   return hrs*rate + ot*rate*mult;
 };
-const incomeAmount = i => i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
+const PAY_PERIODS_PER_YEAR = { biweekly: 26, monthly: 12, bonus: 1 };
+const incomeGrossAmount = i => i.grossAmount!=null ? (+i.grossAmount||0) : i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
+const incomeAmount = i => i.takeHomeAmount!=null ? (+i.takeHomeAmount||0) : i.hourlyRate!=null ? calcPaycheck(i) : (+i.amount||0);
 const moEq = i => i.type==='biweekly' ? incomeAmount(i)*26/12 : i.type==='monthly' ? incomeAmount(i) : 0;
 
 const incomeCalcDetail = i => {
@@ -823,15 +825,19 @@ const pctString = rate => Number((rate * 100).toFixed(3)).toString();
 const getLocalPresets = stateCode => LOCAL_TAX_PRESETS[stateCode] || LOCAL_TAX_PRESETS.default;
 
 function updateCalcPreview() {
+  const type = document.getElementById('iType').value || 'biweekly';
   const i = {
     regularHours: document.getElementById('iRegHours').value,
     hourlyRate: document.getElementById('iHourlyRate').value,
     overtimeHours: document.getElementById('iOtHours').value,
     overtimeMultiplier: document.getElementById('iOtMult').value
   };
-  const amt = calcPaycheck(i);
-  document.getElementById('calcPreviewAmt').textContent = fmtM(amt);
-  document.getElementById('calcPreviewDetail').textContent = incomeCalcDetail(i);
+  const gross = calcPaycheck(i);
+  const taxAdj = estimatePaycheckAfterTaxes(gross, type);
+  const stateCode = taxSettings.state || 'CA';
+  const stateName = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[0];
+  document.getElementById('calcPreviewAmt').textContent = fmtM(taxAdj.net);
+  document.getElementById('calcPreviewDetail').textContent = `${incomeCalcDetail(i)} · gross ${fmtM(gross)} → est net ${fmtM(taxAdj.net)} (${stateName})`;
 }
 
 function calcProgressiveTax(taxableIncome, brackets) {
@@ -901,6 +907,33 @@ function estimateMonthlyTaxes(input) {
   };
 }
 
+function currentTaxInput(monthlyPay) {
+  return {
+    monthlyPay,
+    state: taxSettings.state || 'CA',
+    filingStatus: taxSettings.filingStatus || 'single',
+    dependents: taxSettings.dependents || 0,
+    extraWithholding: taxSettings.extraWithholding || 0,
+    retirement401kPct: taxSettings.retirement401kPct || 0,
+    hsaMonthly: taxSettings.hsaMonthly || 0,
+    medicalMonthly: taxSettings.medicalMonthly || 0,
+    localRatePct: taxSettings.localRatePct || 0
+  };
+}
+
+function estimatePaycheckAfterTaxes(grossPay, payType) {
+  const gross = Math.max(0, Number(grossPay) || 0);
+  const periods = PAY_PERIODS_PER_YEAR[payType] || 12;
+  if (gross <= 0) return { net: 0, tax: 0 };
+  const monthlyGross = (gross * periods) / 12;
+  const monthly = estimateMonthlyTaxes(currentTaxInput(monthlyGross));
+  const periodTax = monthly.total * (12 / periods);
+  return {
+    net: Math.max(0, gross - periodTax),
+    tax: Math.max(0, periodTax)
+  };
+}
+
 function updateTaxPreview() {
   const payEl = document.getElementById('taxMonthlyPay');
   const stateEl = document.getElementById('taxState');
@@ -943,6 +976,8 @@ function updateTaxPreview() {
   document.getElementById('taxExtra').textContent = fmtM(out.extra);
   document.getElementById('taxTotal').textContent = fmtM(out.total);
   document.getElementById('taxNet').textContent = fmtM(out.net);
+  const incomeOverlay = document.getElementById('incomeOverlay');
+  if (incomeOverlay && incomeOverlay.classList.contains('open')) updateCalcPreview();
 }
 
 function initTaxEstimator() {
@@ -1143,6 +1178,9 @@ function renderIncome() {
   const pills  = {biweekly:'blue', monthly:'green', bonus:'purple'};
 
   el.innerHTML = f.map(inc => {
+    const grossAmt = incomeGrossAmount(inc);
+    const netAmt = incomeAmount(inc);
+    const taxDelta = Math.max(0, grossAmt - netAmt);
     const dateF = inc.type==='bonus' ? inc.bonusDate : inc.nextPay;
     const d = dateF ? daysTo(dateF) : null;
     const soon = d!==null && d>=0 && d<=3;
@@ -1154,7 +1192,7 @@ function renderIncome() {
         nextTxt = d>=0 ? `Expected in ${d}d` : `Expected ${fmtD(dateF)}`;
       }
     }
-    const mono = inc.hourlyRate!=null ? incomeCalcDetail(inc)
+    const mono = inc.hourlyRate!=null ? `${incomeCalcDetail(inc)} · gross ${fmtM(grossAmt)} → net ${fmtM(netAmt)}${taxDelta ? ` · tax ${fmtM(taxDelta)}` : ''}`
                : inc.type==='biweekly' ? `≈ ${fmtM(moEq(inc))}/mo`
                : inc.type==='monthly'  ? 'per month'
                : 'one-time';
@@ -1170,7 +1208,7 @@ function renderIncome() {
         <div class="income-mono">${mono}${inc.hourlyRate!=null && inc.type!=='bonus' ? ` · ≈ ${fmtM(moEq(inc))}/mo` : ''}</div>
       </div>
       <div class="income-right">
-        <div class="income-amount">${fmtM(incomeAmount(inc))}</div>
+        <div class="income-amount">${fmtM(netAmt)}</div>
         <div class="card-actions">
           <button class="card-btn" onclick="editIncome('${inc.id}')" title="Edit">✏️</button>
           <button class="card-btn danger" onclick="deleteIncome('${inc.id}')" title="Delete">🗑</button>
@@ -1264,8 +1302,9 @@ function openIncomeSheet(id) {
       document.getElementById('iHourlyRate').value = inc.hourlyRate;
       document.getElementById('iOtHours').value = inc.overtimeHours ?? 0;
       document.getElementById('iOtMult').value = String(inc.overtimeMultiplier ?? 1.5);
-    } else if (inc.amount) {
-      document.getElementById('iHourlyRate').value = (inc.amount / 40).toFixed(2);
+    } else if (inc.grossAmount || inc.amount) {
+      const gross = Number(inc.grossAmount ?? inc.amount) || 0;
+      document.getElementById('iHourlyRate').value = (gross / 40).toFixed(2);
       document.getElementById('iRegHours').value = '40';
     }
     document.getElementById('iNotes').value = inc.notes || '';
@@ -1302,6 +1341,7 @@ document.getElementById('iType').addEventListener('change', function() {
   const isBonus = this.value==='bonus';
   document.getElementById('nextPayRow').style.display   = isBonus?'none':'';
   document.getElementById('bonusDateRow').style.display = isBonus?'':'none';
+  updateCalcPreview();
 });
 ['iRegHours','iHourlyRate','iOtHours','iOtMult'].forEach(id =>
   document.getElementById(id).addEventListener('input', updateCalcPreview));
@@ -1315,10 +1355,16 @@ document.getElementById('saveIncome').onclick = () => {
   const overtimeMultiplier=parseFloat(document.getElementById('iOtMult').value)||1.5;
   if (!name) { alert('Fill in source name.'); return; }
   if (!document.getElementById('iHourlyRate').value) { alert('Enter an hourly rate.'); return; }
-  const amount = calcPaycheck({ regularHours, hourlyRate, overtimeHours, overtimeMultiplier });
-  if (amount <= 0) { alert('Calculated paycheck must be greater than $0.'); return; }
+  const grossAmount = calcPaycheck({ regularHours, hourlyRate, overtimeHours, overtimeMultiplier });
+  if (grossAmount <= 0) { alert('Calculated paycheck must be greater than $0.'); return; }
+  const taxAdj = estimatePaycheckAfterTaxes(grossAmount, type);
   const entry = {
-    name, type, amount,
+    name, type,
+    amount: grossAmount,
+    grossAmount,
+    takeHomeAmount: taxAdj.net,
+    taxWithheld: taxAdj.tax,
+    taxAutoApplied: true,
     regularHours, hourlyRate, overtimeHours, overtimeMultiplier,
     notes: document.getElementById('iNotes').value.trim()
   };
