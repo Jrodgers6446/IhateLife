@@ -469,7 +469,7 @@ body {
   </div>
 
   <div class="tax-estimator">
-    <div class="sum-label">Monthly Tax Estimator (single filer)</div>
+    <div class="sum-label">Monthly Tax Estimator</div>
     <div class="field-row tax-controls">
       <div class="field">
         <label>Monthly Gross Pay ($)</label>
@@ -480,15 +480,63 @@ body {
         <select id="taxState"></select>
       </div>
     </div>
+    <div class="field-row tax-controls">
+      <div class="field">
+        <label>Filing Status</label>
+        <select id="taxFilingStatus">
+          <option value="single">Single</option>
+          <option value="married">Married Filing Jointly</option>
+          <option value="head">Head of Household</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Dependents</label>
+        <input type="number" id="taxDependents" placeholder="0" min="0" step="1">
+      </div>
+    </div>
+    <div class="field-row tax-controls">
+      <div class="field">
+        <label>401(k) Contribution (%)</label>
+        <input type="number" id="tax401kPct" placeholder="0" min="0" max="100" step="0.1">
+      </div>
+      <div class="field">
+        <label>Extra Withholding ($/mo)</label>
+        <input type="number" id="taxExtraWithholding" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="field-row tax-controls">
+      <div class="field">
+        <label>HSA Pre-tax ($/mo)</label>
+        <input type="number" id="taxHsaMonthly" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label>Medical Pre-tax ($/mo)</label>
+        <input type="number" id="taxMedicalMonthly" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="field-row tax-controls">
+      <div class="field">
+        <label>Local / City Tax Preset</label>
+        <select id="taxLocalPreset"></select>
+      </div>
+      <div class="field">
+        <label>Local / City Tax Rate (%)</label>
+        <input type="number" id="taxLocalRate" placeholder="0.000" min="0" step="0.001">
+      </div>
+    </div>
     <div class="tax-breakdown">
+      <div class="tax-row"><span>Pre-tax Deductions</span><strong id="taxPretax">$0.00</strong></div>
       <div class="tax-row"><span>Federal Income Tax</span><strong id="taxFederal">$0.00</strong></div>
+      <div class="tax-row"><span>Dependent Tax Credits</span><strong id="taxDependentCredit">-$0.00</strong></div>
       <div class="tax-row"><span>Social Security</span><strong id="taxSocial">$0.00</strong></div>
       <div class="tax-row"><span>Medicare</span><strong id="taxMedicare">$0.00</strong></div>
       <div class="tax-row"><span id="taxStateLabel">State Income Tax</span><strong id="taxStateWithholding">$0.00</strong></div>
+      <div class="tax-row"><span id="taxLocalLabel">Local / City Tax</span><strong id="taxLocalWithholding">$0.00</strong></div>
+      <div class="tax-row"><span>Extra Withholding</span><strong id="taxExtra">$0.00</strong></div>
       <div class="tax-row total"><span>Total Tax</span><strong id="taxTotal">$0.00</strong></div>
       <div class="tax-row net"><span>Estimated Net Pay</span><strong id="taxNet">$0.00</strong></div>
     </div>
-    <div class="sum-sub">Estimates only. Real withholding depends on W-4 details, deductions, and local taxes.</div>
+    <div class="sum-sub">Estimate only. Uses 2024 brackets and common assumptions; actual payroll withholding can differ by W-4, local rules, and benefits setup.</div>
   </div>
 
   <div class="tabs" id="incomeTabs">
@@ -635,7 +683,21 @@ const isInstalled = () =>
 // ── State ───────────────────────────────────────────────────────
 let bills   = JSON.parse(localStorage.getItem('ihl_bills')   || '[]');
 let incomes = JSON.parse(localStorage.getItem('ihl_incomes') || '[]');
-let taxSettings = JSON.parse(localStorage.getItem('ihl_tax_settings') || '{"monthlyPay":"","state":"CA"}');
+const TAX_SETTINGS_DEFAULTS = {
+  monthlyPay: '',
+  state: 'CA',
+  filingStatus: 'single',
+  dependents: 0,
+  extraWithholding: '',
+  retirement401kPct: '',
+  hsaMonthly: '',
+  medicalMonthly: '',
+  localPreset: 'none',
+  localRatePct: ''
+};
+let storedTaxSettings = {};
+try { storedTaxSettings = JSON.parse(localStorage.getItem('ihl_tax_settings') || '{}') || {}; } catch (_) {}
+let taxSettings = { ...TAX_SETTINGS_DEFAULTS, ...storedTaxSettings };
 let bFilter = 'all', iFilter = 'all';
 let prompt$ = null;
 
@@ -673,18 +735,29 @@ const HINTS = {
   bonus:    '★ One-time — not counted in monthly recurring total'
 };
 
-const FEDERAL_STANDARD_DEDUCTION_SINGLE = 14600;
-const FEDERAL_BRACKETS_SINGLE = [
-  { upTo: 11600, rate: 0.10 },
-  { upTo: 47150, rate: 0.12 },
-  { upTo: 100525, rate: 0.22 },
-  { upTo: 191950, rate: 0.24 },
-  { upTo: 243725, rate: 0.32 },
-  { upTo: 609350, rate: 0.35 },
-  { upTo: Infinity, rate: 0.37 }
-];
+const FEDERAL_STANDARD_DEDUCTION = {
+  single: 14600,
+  married: 29200,
+  head: 21900
+};
+const FEDERAL_BRACKETS = {
+  single: [
+    { upTo: 11600, rate: 0.10 }, { upTo: 47150, rate: 0.12 }, { upTo: 100525, rate: 0.22 },
+    { upTo: 191950, rate: 0.24 }, { upTo: 243725, rate: 0.32 }, { upTo: 609350, rate: 0.35 }, { upTo: Infinity, rate: 0.37 }
+  ],
+  married: [
+    { upTo: 23200, rate: 0.10 }, { upTo: 94300, rate: 0.12 }, { upTo: 201050, rate: 0.22 },
+    { upTo: 383900, rate: 0.24 }, { upTo: 487450, rate: 0.32 }, { upTo: 731200, rate: 0.35 }, { upTo: Infinity, rate: 0.37 }
+  ],
+  head: [
+    { upTo: 16550, rate: 0.10 }, { upTo: 63100, rate: 0.12 }, { upTo: 100500, rate: 0.22 },
+    { upTo: 191950, rate: 0.24 }, { upTo: 243700, rate: 0.32 }, { upTo: 609350, rate: 0.35 }, { upTo: Infinity, rate: 0.37 }
+  ]
+};
+const DEPENDENT_CREDIT_PER = 2000;
 const SOCIAL_SECURITY_WAGE_BASE = 168600;
 const ADDITIONAL_MEDICARE_THRESHOLD = 200000;
+const HSA_TAXABLE_STATES = new Set(['CA', 'NJ']);
 
 const STATE_TAX_RATES = {
   AL: ['Alabama', 0.0400],   AK: ['Alaska', 0.0000],    AZ: ['Arizona', 0.0250],  AR: ['Arkansas', 0.0350],
@@ -701,6 +774,53 @@ const STATE_TAX_RATES = {
   VT: ['Vermont', 0.0500],   VA: ['Virginia', 0.0450],   WA: ['Washington', 0.0000], WV: ['West Virginia', 0.0400],
   WI: ['Wisconsin', 0.0450], WY: ['Wyoming', 0.0000],    DC: ['District of Columbia', 0.0600]
 };
+const LOCAL_TAX_PRESETS = {
+  default: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  NY: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'nyc', label: 'NYC resident', rate: 0.03876 },
+    { key: 'yonkers', label: 'Yonkers resident', rate: 0.01611 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  PA: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'philadelphia', label: 'Philadelphia resident', rate: 0.0375 },
+    { key: 'typical-eit', label: 'Typical local EIT', rate: 0.01 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  OH: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'typical-municipal', label: 'Typical municipal tax', rate: 0.02 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  MD: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'typical-county', label: 'Typical county tax', rate: 0.032 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  IN: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'typical-county', label: 'Typical county tax', rate: 0.015 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  MI: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'detroit-resident', label: 'Detroit resident', rate: 0.024 },
+    { key: 'detroit-nonresident', label: 'Detroit non-resident', rate: 0.012 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ],
+  KY: [
+    { key: 'none', label: 'No local/city tax', rate: 0 },
+    { key: 'typical-county', label: 'Typical county/occupational', rate: 0.0175 },
+    { key: 'custom', label: 'Custom rate', rate: null }
+  ]
+};
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+const pctString = rate => Number((rate * 100).toFixed(3)).toString();
+const getLocalPresets = stateCode => LOCAL_TAX_PRESETS[stateCode] || LOCAL_TAX_PRESETS.default;
 
 function updateCalcPreview() {
   const i = {
@@ -728,22 +848,54 @@ function calcProgressiveTax(taxableIncome, brackets) {
   return tax;
 }
 
-function estimateMonthlyTaxes(monthlyGross, stateCode) {
-  const gross = Math.max(0, Number(monthlyGross) || 0);
-  const annualGross = gross * 12;
-  const taxableFederal = Math.max(0, annualGross - FEDERAL_STANDARD_DEDUCTION_SINGLE);
-  const federalAnnual = calcProgressiveTax(taxableFederal, FEDERAL_BRACKETS_SINGLE);
-  const socialAnnual = Math.min(annualGross, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
-  const medicareAnnual = annualGross * 0.0145 + Math.max(0, annualGross - ADDITIONAL_MEDICARE_THRESHOLD) * 0.009;
-  const stateRate = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[1];
-  const stateAnnual = annualGross * stateRate;
-  const totalAnnual = federalAnnual + socialAnnual + medicareAnnual + stateAnnual;
+function estimateMonthlyTaxes(input) {
+  const gross = Math.max(0, Number(input.monthlyPay) || 0);
+  const stateCode = input.state;
+  const filingStatus = FEDERAL_STANDARD_DEDUCTION[input.filingStatus] ? input.filingStatus : 'single';
+  const dependents = Math.max(0, Math.floor(Number(input.dependents) || 0));
+  const extraMonthly = Math.max(0, Number(input.extraWithholding) || 0);
+  const retirementPct = clamp((Number(input.retirement401kPct) || 0) / 100, 0, 1);
+  const hsaMonthlyInput = Math.max(0, Number(input.hsaMonthly) || 0);
+  const medicalMonthlyInput = Math.max(0, Number(input.medicalMonthly) || 0);
+  const localRate = clamp((Number(input.localRatePct) || 0) / 100, 0, 1);
 
+  let remaining = gross;
+  const retirementMonthly = Math.min(remaining, gross * retirementPct);
+  remaining -= retirementMonthly;
+  const hsaMonthly = Math.min(remaining, hsaMonthlyInput);
+  remaining -= hsaMonthly;
+  const medicalMonthly = Math.min(remaining, medicalMonthlyInput);
+
+  const pretaxFederalMonthly = retirementMonthly + hsaMonthly + medicalMonthly;
+  const pretaxFicaMonthly = hsaMonthly + medicalMonthly;
+  const pretaxStateMonthly = retirementMonthly + medicalMonthly + (HSA_TAXABLE_STATES.has(stateCode) ? 0 : hsaMonthly);
+
+  const annualFederalTaxable = Math.max(0, (gross - pretaxFederalMonthly) * 12 - FEDERAL_STANDARD_DEDUCTION[filingStatus]);
+  const federalAnnualBeforeCredits = calcProgressiveTax(annualFederalTaxable, FEDERAL_BRACKETS[filingStatus]);
+  const dependentCreditAnnual = dependents * DEPENDENT_CREDIT_PER;
+  const dependentCreditAppliedAnnual = Math.min(federalAnnualBeforeCredits, dependentCreditAnnual);
+  const federalAnnualAfterCredits = Math.max(0, federalAnnualBeforeCredits - dependentCreditAppliedAnnual);
+
+  const annualFicaTaxable = Math.max(0, (gross - pretaxFicaMonthly) * 12);
+  const socialAnnual = Math.min(annualFicaTaxable, SOCIAL_SECURITY_WAGE_BASE) * 0.062;
+  const medicareAnnual = annualFicaTaxable * 0.0145 + Math.max(0, annualFicaTaxable - ADDITIONAL_MEDICARE_THRESHOLD) * 0.009;
+
+  const stateRate = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[1];
+  const annualStateTaxable = Math.max(0, (gross - pretaxStateMonthly) * 12);
+  const stateAnnual = annualStateTaxable * stateRate;
+  const localAnnual = annualStateTaxable * localRate;
+  const extraAnnual = extraMonthly * 12;
+
+  const totalAnnual = federalAnnualAfterCredits + socialAnnual + medicareAnnual + stateAnnual + localAnnual + extraAnnual;
   return {
-    federal: federalAnnual / 12,
+    pretax: pretaxFederalMonthly,
+    federalBeforeCredits: federalAnnualBeforeCredits / 12,
+    dependentCreditApplied: dependentCreditAppliedAnnual / 12,
     social: socialAnnual / 12,
     medicare: medicareAnnual / 12,
     state: stateAnnual / 12,
+    local: localAnnual / 12,
+    extra: extraMonthly,
     total: totalAnnual / 12,
     net: gross - totalAnnual / 12
   };
@@ -752,42 +904,126 @@ function estimateMonthlyTaxes(monthlyGross, stateCode) {
 function updateTaxPreview() {
   const payEl = document.getElementById('taxMonthlyPay');
   const stateEl = document.getElementById('taxState');
-  if (!payEl || !stateEl) return;
+  const filingStatusEl = document.getElementById('taxFilingStatus');
+  const dependentsEl = document.getElementById('taxDependents');
+  const extraEl = document.getElementById('taxExtraWithholding');
+  const four01kEl = document.getElementById('tax401kPct');
+  const hsaEl = document.getElementById('taxHsaMonthly');
+  const medEl = document.getElementById('taxMedicalMonthly');
+  const localRateEl = document.getElementById('taxLocalRate');
+  const localPresetEl = document.getElementById('taxLocalPreset');
+  if (!payEl || !stateEl || !filingStatusEl || !dependentsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !localRateEl || !localPresetEl) return;
 
-  const monthlyPay = parseFloat(payEl.value) || 0;
   const stateCode = stateEl.value || 'CA';
   const stateName = (STATE_TAX_RATES[stateCode] || STATE_TAX_RATES.CA)[0];
-  const out = estimateMonthlyTaxes(monthlyPay, stateCode);
+  const localPreset = getLocalPresets(stateCode).find(p => p.key === localPresetEl.value);
+  const out = estimateMonthlyTaxes({
+    monthlyPay: payEl.value,
+    state: stateCode,
+    filingStatus: filingStatusEl.value,
+    dependents: dependentsEl.value,
+    extraWithholding: extraEl.value,
+    retirement401kPct: four01kEl.value,
+    hsaMonthly: hsaEl.value,
+    medicalMonthly: medEl.value,
+    localRatePct: localRateEl.value
+  });
 
   document.getElementById('taxStateLabel').textContent = `${stateName} State Tax`;
-  document.getElementById('taxFederal').textContent = fmtM(out.federal);
+  document.getElementById('taxLocalLabel').textContent = localPreset && localPreset.key !== 'none'
+    ? `Local Tax (${localPreset.label})`
+    : 'Local / City Tax';
+  document.getElementById('taxPretax').textContent = fmtM(out.pretax);
+  document.getElementById('taxFederal').textContent = fmtM(out.federalBeforeCredits);
+  document.getElementById('taxDependentCredit').textContent = `-${fmtM(out.dependentCreditApplied)}`;
   document.getElementById('taxSocial').textContent = fmtM(out.social);
   document.getElementById('taxMedicare').textContent = fmtM(out.medicare);
   document.getElementById('taxStateWithholding').textContent = fmtM(out.state);
+  document.getElementById('taxLocalWithholding').textContent = fmtM(out.local);
+  document.getElementById('taxExtra').textContent = fmtM(out.extra);
   document.getElementById('taxTotal').textContent = fmtM(out.total);
-  document.getElementById('taxNet').textContent = fmtM(Math.max(0, out.net));
+  document.getElementById('taxNet').textContent = fmtM(out.net);
 }
 
 function initTaxEstimator() {
   const payEl = document.getElementById('taxMonthlyPay');
   const stateEl = document.getElementById('taxState');
-  if (!payEl || !stateEl) return;
+  const filingStatusEl = document.getElementById('taxFilingStatus');
+  const dependentsEl = document.getElementById('taxDependents');
+  const extraEl = document.getElementById('taxExtraWithholding');
+  const four01kEl = document.getElementById('tax401kPct');
+  const hsaEl = document.getElementById('taxHsaMonthly');
+  const medEl = document.getElementById('taxMedicalMonthly');
+  const localPresetEl = document.getElementById('taxLocalPreset');
+  const localRateEl = document.getElementById('taxLocalRate');
+  if (!payEl || !stateEl || !filingStatusEl || !dependentsEl || !extraEl || !four01kEl || !hsaEl || !medEl || !localPresetEl || !localRateEl) return;
+
+  const writeTaxSettings = () => {
+    taxSettings = {
+      ...taxSettings,
+      monthlyPay: payEl.value,
+      state: stateEl.value,
+      filingStatus: filingStatusEl.value,
+      dependents: dependentsEl.value,
+      extraWithholding: extraEl.value,
+      retirement401kPct: four01kEl.value,
+      hsaMonthly: hsaEl.value,
+      medicalMonthly: medEl.value,
+      localPreset: localPresetEl.value,
+      localRatePct: localRateEl.value
+    };
+    saveTaxSettings();
+  };
+  const populateLocalPresets = preferred => {
+    const presets = getLocalPresets(stateEl.value);
+    localPresetEl.innerHTML = presets.map(p => `<option value="${p.key}">${p.label}</option>`).join('');
+    const nextPreset = presets.some(p => p.key === preferred) ? preferred : 'none';
+    localPresetEl.value = nextPreset;
+    const chosen = presets.find(p => p.key === nextPreset);
+    if (!taxSettings.localRatePct || nextPreset !== 'custom') {
+      localRateEl.value = chosen && chosen.rate != null ? pctString(chosen.rate) : (taxSettings.localRatePct || '');
+    }
+  };
 
   const states = Object.entries(STATE_TAX_RATES).sort((a, b) => a[1][0].localeCompare(b[1][0]));
   stateEl.innerHTML = states.map(([code, info]) => `<option value="${code}">${info[0]} (${code})</option>`).join('');
 
   payEl.value = taxSettings.monthlyPay || '';
   stateEl.value = STATE_TAX_RATES[taxSettings.state] ? taxSettings.state : 'CA';
+  filingStatusEl.value = FEDERAL_STANDARD_DEDUCTION[taxSettings.filingStatus] ? taxSettings.filingStatus : 'single';
+  dependentsEl.value = taxSettings.dependents || 0;
+  extraEl.value = taxSettings.extraWithholding || '';
+  four01kEl.value = taxSettings.retirement401kPct || '';
+  hsaEl.value = taxSettings.hsaMonthly || '';
+  medEl.value = taxSettings.medicalMonthly || '';
+  localRateEl.value = taxSettings.localRatePct || '';
+  populateLocalPresets(taxSettings.localPreset || 'none');
 
-  payEl.addEventListener('input', () => {
-    taxSettings.monthlyPay = payEl.value;
-    saveTaxSettings();
+  stateEl.addEventListener('change', () => {
+    populateLocalPresets(localPresetEl.value);
+    writeTaxSettings();
     updateTaxPreview();
   });
-  stateEl.addEventListener('change', () => {
-    taxSettings.state = stateEl.value;
-    saveTaxSettings();
+  localPresetEl.addEventListener('change', () => {
+    const selected = getLocalPresets(stateEl.value).find(p => p.key === localPresetEl.value);
+    if (selected && selected.rate != null) localRateEl.value = pctString(selected.rate);
+    writeTaxSettings();
     updateTaxPreview();
+  });
+  localRateEl.addEventListener('input', () => {
+    if (localPresetEl.value !== 'custom') localPresetEl.value = 'custom';
+    writeTaxSettings();
+    updateTaxPreview();
+  });
+  [payEl, filingStatusEl, dependentsEl, extraEl, four01kEl, hsaEl, medEl].forEach(el => {
+    el.addEventListener('input', () => {
+      writeTaxSettings();
+      updateTaxPreview();
+    });
+    el.addEventListener('change', () => {
+      writeTaxSettings();
+      updateTaxPreview();
+    });
   });
 
   updateTaxPreview();
