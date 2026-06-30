@@ -1,8 +1,7 @@
-const CACHE = 'ihl-v10';
+const CACHE = 'ihl-v11';
 const PRECACHE = [
   './',
   './index.html',
-  './imei-checker.html',
   './manifest.webmanifest',
   './icons/icon-192.svg',
   './icons/icon-512.svg',
